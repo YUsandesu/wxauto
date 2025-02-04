@@ -1,0 +1,158 @@
+
+PyAutoGui - 一个流行的跨平台库（具有基于图像的搜索，不支持基于文本的控件操作）。
+
+Inspect.exe 是微软创建的另一个非常好的工具。
+它包含在 Windows SDK 中，因此在 x64 Windows 上可以在以下位置找到：
+C:\Program Files (x86)\Windows Kits\<winver>\bin\x64
+将 Inspect.exe 切换到UIA 模式（使用 MS UI Automation）。
+如果它能显示比 Spy++更多的控件及其属性，那么可能是"uia" 后端由你选择。
+
+py_inspect 是一个基于 pywinauto 的多后端间谍工具原型。
+切换可用后端可以展示在“win32”和“uia”后端层次结构中的差异。
+py_inspect 是未来取代 SWAPY 的工具，SWAPY 在 pywinauto==0.5.4 发布时只支持“win32”后端。
+py_inspect 的初始实现仅包含大约 150 行代码，这要归功于现代的 pywinauto 0.6.0+ 架构。
+
++=========+
+|pywinauto|
++=========+
+# Desktop(): 参数backend 可以选择 "win32" 或 "uia"
+# """
+# pywinauto 提供了两种不同的 GUI 自动化后端：
+# "win32"：基于 Windows API (win32gui, win32api, win32con 等) 的传统方法。
+# "uia"（UI Automation）：基于微软的 UI Automation（UIA）框架，适用于更现代的 Windows 应用（如 UWP 应用）。
+# 当你使用 Desktop(backend="win32") 时，pywinauto 采用传统的 Win32 API 进行窗口检测和操作。
+# """
+
+#windows()
+#此处实际调用的是find_elements
+# 可用的值包括：
+# class_name 具有此窗口类的元素
+# class_name_re  类名匹配此正则表达式的元素
+# parent    此元素的子元素
+# process   在此进程中运行的元素
+# title具有此文本的元素
+# title_re  文本匹配此正则表达式的元素
+# top_level_only 仅限顶级元素（默认为 True）
+# visible_only   仅限可见元素（默认为 True）
+# enabled_only   仅限启用元素（默认为 False）
+# best_match与此标题相似的元素
+# handle    要返回的元素句柄
+# ctrl_index要返回的子元素的索引
+# found_index    要返回的过滤后的子元素索引
+# predicate_func 用户提供的用于自定义元素验证的钩子
+# active_only    仅限活动元素（默认为 False）
+# control_id具有此控制 ID 的元素
+# control_type   具有此控制类型的元素（字符串；用于 UIAutomation 元素）
+# auto_id   具有此自动化 ID 的元素（用于 UIAutomation 元素）
+# framework_id   具有此框架 ID 的元素（用于 UIAutomation 元素）
+# backend   在搜索时使用的后端名称（默认为 None，表示当前活动的后端）
+
+基本用户输入模块:
+https://pywinauto.readthedocs.io/en/latest/code/code.html#controls-reference
+---------------------pywinauto.base_wrapper 基础封装--------------------
+https://pywinauto.readthedocs.io/en/latest/code/pywinauto.base_wrapper.html
+
+class_name() #Return the class name of the elenemt
+返回元素的类名
+---------------------pywinauto.base_wrapper 基础封装--------------------
+**如果用户移动鼠标，该方法也是脆弱的，因为这可能会在 click_input 完成之前轻易地将鼠标移出控件。**
+（1）double_click_input(button='left', coords=(None, None))
+
+（2）click_input(button='left',coords=(None, None),button_down=True,button_up=True,
+                double=False,wheel_dist=0,use_log=True,pressed='',absolute=False,
+                key_down=True,key_up=True) #单击指定坐标
+button--->One of ‘left’, ‘right’, ‘middle’ or ‘x’ (Default: ‘left’, ‘move’ is a special case)
+coords--->要点击的坐标。(默认: 控件的中心)
+wheel_dist--->滚动鼠标滚轮的距离（默认值：0）
+
+（3）move_mouse_input(coords=(0, 0), pressed='', absolute=True)
+（4）press_mouse_input(button='left', coords=(None, None),
+                   pressed='', absolute=True, key_down=True, key_up=True)
+                   FIXME 待确认：按下鼠标按钮使用？没懂：按下鼠标按钮使用 SendInput
+(5)right_click_input(coords=(None, None))右键点击指定坐标
+
+（6）type_keys(keys, pause=None, with_spaces=False, with_tabs=False, with_newlines=False,
+              turn_off_numlock=True, set_foreground=True, vk_packet=True)
+              FIXME 没懂：将按键输入到元素中使用 keyboard.send_keys
+（7）wheel_mouse_input(coords=(None, None), wheel_dist=1, pressed='') #鼠标滚轮
+
+---------------------pywinauto.base_wrapper 基础封装--------------------
+draw_outline(colour='green', thickness=2,
+             fill=<MagicMock name='mock.win32defines.BS_NULL' id='140124673757368'>,
+             rect=None) #在窗口周围画一个轮廓
+colour--->可以是整数或'red'，'green'，'blue' 之一（默认'green'）
+fill--->如何填充矩形（默认 BS_NULL）
+rect--->要绘制的矩形坐标（默认为控件的矩形）
+
+is_dialog() #如果控件是顶层窗口（top level window），则返回 True
+TODO 怎么理解顶层窗口？
+process_id() #返回拥有此窗口的进程 ID
+
+rectangle() #返回元素的矩形
+#rectangle 相对于屏幕
+#client_rects 窗口大小 例：[<RECT L0, T0, R875, B625>]
+
+get_properties() #将控件的属性作为字典返回。
+
+is_visible() #元素是否可见
+如果你想等待一个元素变得可见（或等待它变得隐藏）使用：
+Application.wait('visible')
+Application.wait_not('visible')
+
+root() #Return wrapper for root element (desktop)
+返回根元素的包装器 (desktop)
+
+set_focus() #将焦点设置到此元素
+
+texts() #Return the text for each item of this control
+返回此控件每个项目的文本
+TODO要测试一下
+
+It is a list of strings for the control.
+It is frequently overridden to extract all strings from a control with multiple items.
+这是一个用于控制的字符串列表。它经常被重写以从具有多个项目的控件中提取所有字符串。
+
+它总是一个列表 包含一个或多个字符串：
+The first element is the window text of the control
+第一个元素是控件的窗口文本
+Subsequent elements contain the text of any items of the control
+(e.g. items in a listbox/combobox, tabs in a tabcontrol)
+随后的元素包含控件的任何项目的文本（例如，列表框/组合框中的项目，标签控件中的选项卡）。
+
+was_maximized() 检测窗口是否已最大化（在最小化之前）
+
+window_text() #元素的窗口文本
+许多控件有其他可见的文本，例如，Edit 控件的 window_text 通常为空字符串，但在编辑窗口中仍然显示文本。
+
+
+----------------------pywinauto.controls.hwndwrapper-------------------
+https://pywinauto.readthedocs.io/en/latest/code/pywinauto.controls.hwndwrapper.html
+
+----------------------pywinauto.controls.hwndwrapper-------------------
+window.restore()  # 恢复最小化的窗口并将其置于前台
+
+
+How To’s
+https://pywinauto.readthedocs.io/en/latest/HowTo.html?highlight=window_text
+
+如何访问系统托盘（又名 SysTray，又名“Notification Area”）:
+它是一个类为 TrayNotifyWnd 的窗口内的 Pager 控件的子控件
+{'class_name': 'SystemTray_Main', 'friendly_class_name': 'SystemTray_Main', 'texts': ['电池指示器'], 'control_id': 0, 'rectangle': <RECT L0, T0, R16, B16>, 'is_visible': False, 'is_enabled': True, 'control_count': 0, 'style': -2080112640, 'exstyle': 392, 'user_data': 126809640, 'context_help_id': 0, 'fonts': [<LOGFONTW 'SimSun' -15>], 'client_rects': [<RECT L0, T0, R0, B0>], 'is_unicode': True, 'menu_items': [], 'automation_id': ''}
+并且在另一个类为 Shell_TrayWnd 的窗口内，所有这些窗口都是正在运行的资源管理器实例的一部分。
+``重要的是要记住，您正在寻找“Explorer.exe”应用程序中类名为“Shell_TrayWnd”的窗口
+该窗口具有标题为“Notification Area”的工具栏控件。
+import pywinauto.application
+app = pywinauto.application.Application().connect(path="explorer")
+systray_icons = app.ShellTrayWnd.NotificationAreaToolbar
+
+app = Application().connect(process=2341) 应用程序的进程 ID
+
+注意：如果对话框的标题很长 - 则属性访问 可能很长，但在这些情况下，它通常更容易使用:
+app.window(title_re=".*Part of Title.*")
+
+https://github.com/pywinauto/pywinauto
+
+每种不同控制类型的可用方法：
+https://pywinauto.readthedocs.io/en/latest/controls_overview.html
+
+

@@ -166,7 +166,7 @@ class WeChat(WeChatBase):
             sessionname (str): 聊天对象名
             amount (int): 新消息条数
         """
-        matchobj = re.search('\d+条新消息', SessionItem.Name)
+        matchobj = re.search('\d+条新消息', SessionItem.Name) #TODO re模块是什么？
         amount = 0
         if matchobj:
             try:
