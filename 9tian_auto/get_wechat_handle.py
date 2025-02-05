@@ -59,6 +59,9 @@ def wechat_shot_screen(Main=True,Notify=True,close=True):
     return back_dict
 
 def move_to_wechat_sys():
+    """
+    循环调用自己，等待找到托盘图标，然后滑动指针过去，来激活微信的Notify_window
+    """
     x, y = sys_shot()
     if recognition_color(blur=True) is not False:
         w_x, w_y = recognition_color()
@@ -70,14 +73,18 @@ def move_to_wechat_sys():
     else:
         move_to_wechat_sys()
 
-# move_to_wechat_sys()
-# back=wechat_shot_screen(Main=False)
-# print(back)
-# back=recognition_color(find_image='Notify_window.png',color_smooth=0,color=wechat_red_BGR)
-# if back is not False:
-#     print('当前存在新消息')
-# else:
-#     print("当前没有新消息")
-#
+def is_new_information():
+    """
+    通过颜色识别来判断是否存在新消息
+    """
+    move_to_wechat_sys()
+    back = wechat_shot_screen(Main=False)
+    print(back)
+    back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)
+    if back is not False:
+        return True
+    else:
+        return False
+
 # #TODO 拆分Main_Window窗口
-# wechat_shot_screen(Main=True,Notify=False)
+wechat_shot_screen(Main=True,Notify=False)

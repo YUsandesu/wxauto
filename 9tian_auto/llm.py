@@ -1,51 +1,72 @@
 import openai
 import os
 import random
+import requests
+from pymsgbox import prompt
 
 default_prompt = '''you are a helpful assistant'''
 
+def setup():
+    # 获取桌面路径
+    desktop_path = os.path.join(os.path.expanduser('~'), 'Desktop')
+    #os.path.expanduser('~') 获取当前用户的主目录路径。os.path.join() 将主目录路径与 'Desktop' 拼接，得到桌面路径。
+    # 指定文件名
+    file_name = 'MY-AI.txt'
+    # 拼接文件的完整路径
+    file_path = os.path.join(desktop_path, file_name)
+    # 读取文件内容
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            text = file.read()
+            print(text)
+    except FileNotFoundError:
+        print(f"文件 {file_name} 未找到")
+    except Exception as e:
+        print(f"读取文件时发生错误: {e}")
 
-class GPT:
-    def __init__(self, api_key, prompt=None, base_url=None, proxy=None):
-        self.api_key = api_key
-        self.base_url = base_url
-        if proxy:
-            os.environ['HTTP_PROXY'] = proxy
-            os.environ['HTTPS_PROXY'] = proxy
-        self.client = openai.OpenAI(api_key=self.api_key, base_url=self.base_url)
-        self.initialize(prompt)
+    data_dict = {}
+    # 按行分割文本
+    lines = text.strip().split('\n')
 
-    def initialize(self, prompt=None):
-        """重置对话，清空历史消息。如果有提示，添加提示。
+    # 遍历每一行
+    for line in lines:
+        # 按冒号分割键和值
+        key, value = line.split(':', 1)
+        # 去除键和值的前后空格，并添加到字典中
+        data_dict[key.strip()] = value.strip()
 
-        Args:
-            prompt (str): 提示信息，默认为 None。
+    # 输出字典
+    print(data_dict)
+    return data_dict
 
-        Returns:
-            None
-        """
-        if prompt:
-            self.messages = [{"role": "system", "content": prompt}]
+
+info = setup()
+key, url, model = info['KEY'], info['URL'], info['model']
+
+
+def chat(prompt,base_url=url, key=key, model=model):
+    url = base_url  # API 地址
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}"  # API 密钥
+    }
+    data = {
+        "model": model,
+        "messages": [
+            {"role": "user", "content": prompt}  # 使用 messages 字段
+        ]
+    }
+
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        if response.status_code == 200:
+            # return response.json()  # 返回 JSON 数据
+            back = response.json()
+            return back['choices'][0]['message']['content']
         else:
-            self.messages = [{"role": "system", "content": default_prompt}]
+            return f"API 调用失败，状态码: {response.status_code}, 响应内容: {response.text}"
+    except Exception as e:
+        return f"API 调用异常: {str(e)}"
 
-    def chat(self, prompt, model="gpt-3.5-turbo"):
-        """对话。
-
-        Args:
-            prompt (str): 用户输入。
-            model (str): 模型，默认为 gpt-3.5-turbo。
-
-        Returns:
-            str: 模型回复。
-        """
-        self.messages.append({"role": "user", "content": prompt})
-        response = self.client.chat.completions.create(
-            model=model,
-            messages=self.messages,
-            temperature=0.8,
-            seed=random.randint(0, 1000)
-        )
-        reply = response.choices[0].message.content
-        self.messages.append({"role": "assistant", "content": reply})
-        return reply
+# 测试
+print(chat("你好，我是喵喵，请和我打个招呼"))
