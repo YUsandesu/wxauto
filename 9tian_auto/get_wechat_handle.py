@@ -88,6 +88,14 @@ def is_new_information():
 # #TODO 拆分Main_Window窗口
 #wechat_shot_screen(Main=True,Notify=False,close=False)
 
+def get_my_name():
+    Wechat_main = uia.WindowControl(ClassName='WeChatMainWndForPC', searchDepth=1)
+    MainControl1 = [i for i in Wechat_main.GetChildren() if not i.ClassName][0]
+    MainControl2 = MainControl1.GetFirstChildControl()
+    NavigationBox, SessionBox, ChatBox = MainControl2.GetChildren()
+    A_MyIcon = NavigationBox.ButtonControl()
+    return A_MyIcon.Name
+
 def get_chat_message():
     Wechat_main=uia.WindowControl(ClassName='WeChatMainWndForPC', searchDepth=1) #获取对象
     m_rect=Wechat_main.BoundingRectangle
@@ -161,7 +169,7 @@ def text_easy_read(control_lists):
             text=text.replace("\n", "||")
             back += f'"{text}"'
         if i.LocalizedControlType == '按钮':
-            if i.Name=='.yummy':#TODO 改成nickname
+            if i.Name== get_my_name():
                 back += f'<--[我说]\n'
             else:
                 back +=f'<--[{i.Name}]\n'
