@@ -1,8 +1,7 @@
-import openai
+# import openai
 import os
-import random
+# import random
 import requests
-from pymsgbox import prompt
 
 default_prompt = '''you are a helpful assistant'''
 
@@ -42,8 +41,9 @@ def setup():
 
 info = setup()
 key, url, model = info['KEY'], info['URL'], info['model']
-
-
+model='gpt-4o'
+# model='gpt-3.5-turbo'
+#TODO 应该包含Prompt上下文信息，帮助模型更好地理解任务。
 def chat(prompt,base_url=url, key=key, model=model):
     url = base_url  # API 地址
     headers = {
@@ -53,8 +53,9 @@ def chat(prompt,base_url=url, key=key, model=model):
     data = {
         "model": model,
         "messages": [
-            {"role": "user", "content": prompt}  # 使用 messages 字段
-        ]
+            {"role": "user", "content": prompt}  #TODO 关于ROLE是什么作用?
+        ],
+        "temperature": 0.5
     }
 
     try:
@@ -69,4 +70,4 @@ def chat(prompt,base_url=url, key=key, model=model):
         return f"API 调用异常: {str(e)}"
 
 # 测试
-print(chat("你好，我是喵喵，请和我打个招呼"))
+# print(chat("你好，我是喵喵，请和我打个招呼"))

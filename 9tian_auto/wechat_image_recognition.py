@@ -24,12 +24,12 @@ def recognition_color(find_image="sys.png",color=wechat_green_BGR,color_smooth=1
     """
     wechat_sys_color_BGR = np.array([[list(color)]], dtype=np.uint8)  # (1,1,3) 形状
     wechat_sys_color_HSV = cv2.cvtColor(wechat_sys_color_BGR, cv2.COLOR_BGR2HSV)
-    print(f'原始颜色：{wechat_sys_color_HSV}')
+    # print(f'原始颜色：{wechat_sys_color_HSV}')
     smooth = color_smooth
     up_HSV = np.clip(wechat_sys_color_HSV + smooth, [0, 0, 0], [179, 255, 255])
     low_HSV = np.clip(wechat_sys_color_HSV - smooth, [0, 0, 0], [179, 255, 255])
     #FIXME HSV空间转换应该重新定义色相纯度明度的SMOOTH关系
-    print(f'取值范围：{up_HSV}---{low_HSV}')
+    # print(f'取值范围：{up_HSV}---{low_HSV}')
     image = cv2.imread(find_image)# 读取图像
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间
     mask = cv2.inRange(hsv, low_HSV, up_HSV)# 颜色过滤，创建掩码
@@ -37,7 +37,7 @@ def recognition_color(find_image="sys.png",color=wechat_green_BGR,color_smooth=1
         blurred = cv2.GaussianBlur(mask, (5, 5), 0)  # 进行高斯模糊（减少噪声）
         mask=blurred
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)# 识别颜色区域轮廓
-    print(f"len_contours={len(contours)}")
+    # print(f"len_contours={len(contours)}")
 
     contours_dict={}
     for cnt in contours:
@@ -52,7 +52,7 @@ def recognition_color(find_image="sys.png",color=wechat_green_BGR,color_smooth=1
             if test:
                 cv2.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
     if test:
-        print('显示结果')
+        # print('显示结果')
         # 显示结果
         cv2.imshow("Original", image)
         cv2.imshow("Masked & Blurred", mask)

@@ -1,20 +1,19 @@
 import time
-
-from imageio.config.plugins import class_name
 from pywinauto import Desktop,Application
 import win32gui
 from wechat_image_recognition import *
 # import pyautogui
 # import ctypes
 import autoit
-
+# import llm
+import uiautomation as uia
 
 def sys_shot():
     taskbar_handle = win32gui.FindWindow("Shell_TrayWnd", None)  # 获取任务栏句柄
     systray_handle = win32gui.FindWindowEx(taskbar_handle, 0, "TrayNotifyWnd", None)  # 获取托盘句柄
     SYS = Desktop().windows(handle=systray_handle)  # 获取托盘对象
     for i in SYS:
-        print('托盘句柄---开始快照')
+        # print('托盘句柄---开始快照')
         image = i.capture_as_image()  # 获取窗口截图作为PIL图像对象
         image.save(f'sys.png')  # 保存图像
         rect=i.rectangle()
@@ -26,14 +25,14 @@ def wechat_shot_screen(Main=True,Notify=True,close=True):
     # 微信登录窗口类名：WeChatLoginWndForPC
     # 微信浏览器类名：Chrome_WidgetWin_0
     for t, w in enumerate(wechat_windows):
-        print(f"wechat_shot_screen当前正在查找：{w.get_properties()}")
+        # print(f"wechat_shot_screen当前正在查找：{w.get_properties()}")
         if w.class_name() == 'WeChatMainWndForPC' and Main:  # 微信主窗口的类名：WeChatMainWndForPC，可见时：'style': 370081792
             if w.is_visible is False:
                 # 如果窗口当前不可见：
                 w.restore()
             else:
                 w.set_focus()  # 如果窗口可见
-            print('Wechat聊天主界面---开始快照')
+            # print('Wechat聊天主界面---开始快照')
             image = w.capture_as_image()  # 获取窗口截图作为PIL图像对象
             image.save(f'Main_Window.png')  # 保存图像
             rect = w.rectangle()
@@ -46,7 +45,7 @@ def wechat_shot_screen(Main=True,Notify=True,close=True):
                 w.restore()
             else:
                 w.set_focus()  # 如果窗口可见
-            print('Wechat未读消息---开始快照')
+            # print('Wechat未读消息---开始快照')
             image = w.capture_as_image()  # 获取窗口截图作为PIL图像对象
             image.save(f'Notify_window.png')  # 保存图像
             rect = w.rectangle()
@@ -65,9 +64,9 @@ def move_to_wechat_sys():
     x, y = sys_shot()
     if recognition_color(blur=True) is not False:
         w_x, w_y = recognition_color()
-        print(x, y)
-        print(w_x, w_y)
-        print(x + w_x, y + w_y)
+        # print(x, y)
+        # print(w_x, w_y)
+        # print(x + w_x, y + w_y)
         tray_x, tray_y = x + w_x, y + w_y
         autoit.mouse_move(tray_x, tray_y, speed=2)  # 速度 10 表示平滑移动
     else:
@@ -79,7 +78,7 @@ def is_new_information():
     """
     move_to_wechat_sys()
     back = wechat_shot_screen(Main=False)
-    print(back)
+    # print(back)
     back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)
     if back is not False:
         return True
@@ -87,4 +86,116 @@ def is_new_information():
         return False
 
 # #TODO 拆分Main_Window窗口
-wechat_shot_screen(Main=True,Notify=False)
+#wechat_shot_screen(Main=True,Notify=False,close=False)
+
+def get_chat_message():
+    Wechat_main=uia.WindowControl(ClassName='WeChatMainWndForPC', searchDepth=1) #获取对象
+    m_rect=Wechat_main.BoundingRectangle
+    # HWND = FindWindow(classname='WeChatMainWndForPC') #获取窗口句柄
+    # win32gui.ShowWindow(HWND, 1)
+    # Wechat_main.SwitchToThisWindow()
+    # 三个布局，导航栏(A)、聊天列表(B)、聊天框(C)
+    # _______________
+    # |■|———|    -□×|
+    # | |———|       |
+    # |A| B |   C   |   <--- 微信窗口布局简图示意
+    # | |———|———————|
+    # |=|———|       |
+    # ———————————————
+    MainControl1 = [i for i in Wechat_main.GetChildren() if not i.ClassName][0]
+    MainControl2 = MainControl1.GetFirstChildControl()
+    NavigationBox, SessionBox, ChatBox = MainControl2.GetChildren()
+    # print(NavigationBox)#导航栏
+    # print(SessionBox)#人物名称栏
+    # print(ChatBox)#聊天栏
+    #初始化导航栏
+    A_MyIcon = NavigationBox.ButtonControl()
+    A_ChatIcon = NavigationBox.ButtonControl(Name='聊天')
+    A_ContactsIcon = NavigationBox.ButtonControl(Name='通讯录')
+    A_FavoritesIcon = NavigationBox.ButtonControl(Name='收藏')
+    A_FilesIcon = NavigationBox.ButtonControl(Name='聊天文件')
+    A_MomentsIcon = NavigationBox.ButtonControl(Name='朋友圈')
+    A_MiniProgram = NavigationBox.ButtonControl(Name='小程序面板')
+    A_Phone = NavigationBox.ButtonControl(Name='手机')
+    A_Settings = NavigationBox.ButtonControl(Name='设置及其他')
+
+    # 初始化聊天列表，以B开头
+    B_Search = SessionBox.EditControl(Name='搜索')
+
+    # 初始化聊天栏，以C开头
+    C_MsgList = ChatBox.ListControl(Name='消息') #接受消息位置
+    c_rect = C_MsgList.BoundingRectangle
+    # print(m_rect)
+    # print(c_rect)
+    # print(C_MsgList)
+    # print(A_MyIcon.Name)#我的名称
+
+    localcation=[c_rect.left-m_rect.left,c_rect.top-m_rect.top]
+    # back={}
+    # back['location']=localcation
+    # back['mouse_range']=[c_rect.xcenter(),c_rect.bottom],[c_rect.xcenter(),c_rect.top]
+
+    # controls = GetAllControlList(ChatBox)
+    controls = GetAllControlList(C_MsgList)
+    # print(controls)
+    message_list=[(i.Name,i.LocalizedControlType,i.ControlType,i.IsContentElement) for i in controls]
+    # print(f'获取到message_list:{message_list}')
+    return text_easy_read(controls)
+
+def text_easy_read(control_lists):
+    def is_int(num):
+        try:
+            int(num)  # 尝试转换为整数
+            return True
+        except ValueError:
+            return False
+    user=''
+    back=''
+    for i in control_lists:
+        if ':' in i.Name:
+            sp=str(i.Name).split(':')
+            if all(is_int(num) for num in sp):
+                continue
+        if i.LocalizedControlType == '列表项目':
+            text=i.Name
+            text=text.replace("\n", "||")
+            back += f'"{text}"'
+        if i.LocalizedControlType == '按钮':
+            if i.Name=='.yummy':#TODO 改成nickname
+                back += f'<--[我说]\n'
+            else:
+                back +=f'<--[{i.Name}]\n'
+                user=i.Name
+    return back,user
+
+def GetAllControlList(ele):
+    def findall(ele, n=0, text=[]):
+        if ele.Name:
+            text.append(ele)
+        eles = ele.GetChildren()
+        for ele1 in eles:
+            text = findall(ele1, n+1, text)
+        return text
+    text_list = findall(ele)
+    return text_list
+
+def FindWindow(classname=None, name=None):
+    return win32gui.FindWindow(classname, name)
+
+def get_send_button():
+    Wechat_main = uia.WindowControl(ClassName='WeChatMainWndForPC', searchDepth=1)  # 获取对象
+    MainControl1 = [i for i in Wechat_main.GetChildren() if not i.ClassName][0]
+    MainControl2 = MainControl1.GetFirstChildControl()
+    NavigationBox, SessionBox, ChatBox = MainControl2.GetChildren()
+    # 初始化聊天栏，以C开头
+    C_MsgList = ChatBox.ListControl(Name='消息')  # 接受消息位置
+    controls = GetAllControlList(ChatBox)
+    # print(controls)
+    message_list = [(i.Name, i.LocalizedControlType, i.ControlType, i.IsContentElement) for i in controls]
+    for i in controls:
+        if '发送(S)' in i.Name:
+            center=[i.BoundingRectangle.xcenter(), i.BoundingRectangle.ycenter()]
+            return center
+
+# print(message_list)
+# print(is_new_information())

@@ -1,0 +1,9 @@
+编译方法：
+python -m PyInstaller --onefile "C:\\Users\\miaom\\Documents\\GitHub\\wxauto\\9tian_auto\\demo_wechat_auto_reply.py"--add-binary "C:\\Users\\miaom\\AutoItX3_x64.dll;."--add-binary "C:\\Users\\miaom\\AutoItX3.dll;."
+#需要修改autoit的源码来找到运行目录下的dll
+
+python -m PyInstaller --onedir "C:\\Users\\miaom\\Documents\\GitHub\\wxauto\\9tian_auto\\demo_wechat_auto_reply.py"
+
+python "C:\\Users\\miaom\\Documents\\GitHub\\wxauto\\9tian_auto\\demo_wechat_auto_reply.py"
+
+#在编译的时候必须要重新把 AutoItX3 和AutoItX3_x64.dll 重新放入目录才能成功运行
