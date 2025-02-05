@@ -40,9 +40,9 @@ def setup():
 
 
 info = setup()
-key, url, model = info['KEY'], info['URL'], info['model']
-model='gpt-4o'
-# model='gpt-3.5-turbo'
+key, url, model = info['KEY'], info['URL'], 'gpt-4o'
+
+#model='gpt-4o''gpt-3.5-turbo'
 #TODO 应该包含Prompt上下文信息，帮助模型更好地理解任务。
 def chat(prompt,base_url=url, key=key, model=model):
     url = base_url  # API 地址
@@ -70,4 +70,4 @@ def chat(prompt,base_url=url, key=key, model=model):
         return f"API 调用异常: {str(e)}"
 
 # 测试
-# print(chat("你好，我是喵喵，请和我打个招呼"))
+print(chat("你好，我是喵喵，请和我打个招呼"))
