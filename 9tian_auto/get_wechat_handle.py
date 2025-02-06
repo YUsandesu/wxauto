@@ -1,3 +1,4 @@
+import random
 import time
 from pywinauto import Desktop,Application
 import win32gui
@@ -19,6 +20,38 @@ def sys_shot():
         rect=i.rectangle()
         return rect.left,rect.top
 
+def close_wechat_Main_Window():
+    wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表
+    for t, w in enumerate(wechat_windows):
+        if w.class_name() == 'WeChatMainWndForPC':  # 微信主窗口的类名：WeChatMainWndForPC，可见时：'style': 370081792
+            if w.is_visible is True:
+                w.set_focus()
+                w.close_alt_f4()
+                if w.is_visible is True:
+                    close_wechat_Main_Window()#循环调用
+
+def refresh_wechat_window(Main=False,Notify=True,):
+    wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表
+    for t, w in enumerate(wechat_windows):
+        if w.class_name() == 'WeChatMainWndForPC' and Main:  # 微信主窗口的类名：WeChatMainWndForPC，可见时：'style': 370081792
+            if w.is_visible is False:
+                w.restore()
+            else:
+                w.set_focus()  # 如果窗口可见
+            if w.is_visible() is False:
+                return False
+        if w.class_name() == 'TrayNotifyWnd' and Notify:  # 微信消息提示窗口类名 TrayNotifyWnd
+            move_to_wechat_sys()
+            time.sleep(1)
+            if w.is_visible is False:
+                w.restore()
+            else:
+                w.set_focus()  # 如果窗口可见
+            if w.is_visible() is False:
+                return False
+            # print('Wechat未读消息---开始快照')
+    return True
+
 def wechat_shot_screen(Main=True,Notify=True,close=True):
     back_dict={}
     wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表
@@ -33,11 +66,19 @@ def wechat_shot_screen(Main=True,Notify=True,close=True):
             else:
                 w.set_focus()  # 如果窗口可见
             # print('Wechat聊天主界面---开始快照')
+            if w.is_visible() is False:
+                while refresh_wechat_window(Main=True,Notify=False) is False:
+                    time.sleep(1)
+                    continue
+                wechat_shot_screen(Main,Notify,close)
+                break
             image = w.capture_as_image()  # 获取窗口截图作为PIL图像对象
             image.save(f'Main_Window.png')  # 保存图像
             rect = w.rectangle()
             back_dict['Main']=rect.left, rect.top
-
+            if close:
+                if w.is_visible():
+                    w.close_alt_f4()  # 关闭窗口
 
 
         if w.class_name() == 'TrayNotifyWnd' and Notify:  # 微信消息提示窗口类名 TrayNotifyWnd
@@ -46,21 +87,48 @@ def wechat_shot_screen(Main=True,Notify=True,close=True):
             else:
                 w.set_focus()  # 如果窗口可见
             # print('Wechat未读消息---开始快照')
+            if w.is_visible() is False:
+                while refresh_wechat_window(Main=False,Notify=True) is False:
+                    time.sleep(1)
+                    continue
+                break
             image = w.capture_as_image()  # 获取窗口截图作为PIL图像对象
             image.save(f'Notify_window.png')  # 保存图像
             rect = w.rectangle()
             back_dict['Notify'] = rect.left, rect.top
+            if close:
+                if w.is_visible():
+                    try:
+                        w.close_alt_f4()  # 关闭窗口
+                    except Exception as e:
+                        print(f"出现异常,跳过本次关闭{w}")
 
-        if close:
-            if w.is_visible():
-                w.close_alt_f4()  # 关闭窗口
 
     return back_dict
+
+def close_window(Main=True,Notify=True,close=True):
+    wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表
+    for t, w in enumerate(wechat_windows):
+        if w.class_name() == 'WeChatMainWndForPC' and Main:  # 微信主窗口的类名：WeChatMainWndForPC，可见时：'style': 370081792
+            if w.is_visible is False:
+                # 如果窗口当前不可见：
+                continue
+            if close:
+                if w.is_visible():
+                    w.close_alt_f4()  # 关闭窗口
+
+        if w.class_name() == 'TrayNotifyWnd' and Notify:  # 微信消息提示窗口类名 TrayNotifyWnd
+            if w.is_visible is False:
+               continue
+            if close:
+                if w.is_visible():
+                    w.close_alt_f4()  # 关闭窗口
 
 def move_to_wechat_sys():
     """
     循环调用自己，等待找到托盘图标，然后滑动指针过去，来激活微信的Notify_window
     """
+    autoit.mouse_move(random.randint(0,100), random.randint(0,100), speed=2)
     x, y = sys_shot()
     if recognition_color(blur=True) is not False:
         w_x, w_y = recognition_color()
@@ -77,7 +145,7 @@ def is_new_information():
     通过颜色识别来判断是否存在新消息
     """
     move_to_wechat_sys()
-    back = wechat_shot_screen(Main=False)
+    back = wechat_shot_screen(Main=False,Notify=True,close=True)
     # print(back)
     back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)
     if back is not False:
@@ -96,7 +164,10 @@ def get_my_name():
     A_MyIcon = NavigationBox.ButtonControl()
     return A_MyIcon.Name
 
-def get_chat_message():
+def get_chat_element():
+    """
+    返回(元素列表,my_name)
+    """
     Wechat_main=uia.WindowControl(ClassName='WeChatMainWndForPC', searchDepth=1) #获取对象
     m_rect=Wechat_main.BoundingRectangle
     # HWND = FindWindow(classname='WeChatMainWndForPC') #获取窗口句柄
@@ -148,33 +219,7 @@ def get_chat_message():
     # print(controls)
     message_list=[(i.Name,i.LocalizedControlType,i.ControlType,i.IsContentElement) for i in controls]
     # print(f'获取到message_list:{message_list}')
-    return text_easy_read(controls)
-
-def text_easy_read(control_lists):
-    def is_int(num):
-        try:
-            int(num)  # 尝试转换为整数
-            return True
-        except ValueError:
-            return False
-    user=''
-    back=''
-    for i in control_lists:
-        if ':' in i.Name:
-            sp=str(i.Name).split(':')
-            if all(is_int(num) for num in sp):
-                continue
-        if i.LocalizedControlType == '列表项目':
-            text=i.Name
-            text=text.replace("\n", "||")
-            back += f'"{text}"'
-        if i.LocalizedControlType == '按钮':
-            if i.Name== get_my_name():
-                back += f'<--[我说]\n'
-            else:
-                back +=f'<--[{i.Name}]\n'
-                user=i.Name
-    return back,user
+    return controls,get_my_name()
 
 def GetAllControlList(ele):
     def findall(ele, n=0, text=[]):
