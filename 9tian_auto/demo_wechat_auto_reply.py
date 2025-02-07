@@ -46,7 +46,7 @@ def get_rely():
     print(f'OPENAI返回值:{back_word}')
     if 'gotostop' in back_word:
         return None
-    return reduce_error(back_word,'output')
+    return back_word
 def start():
     while True:
         close_window(Main=True, Notify=False, close=True)
