@@ -2,13 +2,13 @@ import time
 from time import sleep
 
 from fontTools.misc.cython import returns
+from twisted.words.protocols.irc import split
 
 from get_wechat_handle import *
 from llm import *
 import autoit
-
 import sys
-import os
+from user_hash import *
 #+---+
 #|流程|
 #+---+
@@ -30,6 +30,18 @@ import os
                                 #TODO 向指定人发送信息
 USER_DONT_REPLY=setup_info['dontreply']
 ADMIN_USER=setup_info['ADMIN']
+def admin_code(input_val):
+    """
+    输入*UserID_send_XXXXX 可以向user发送XXXXX
+    """
+    if "_send_" in input_val:
+        user_value_hash,message=input_val.split('_send_')
+        found_user = hash_2_user(user_value_hash)
+        if found_user is not None:
+            send_message_to_user(hash_2_user(user_value_hash),message)
+        else:
+            send_message_to_user(ADMIN_USER,f"发送失败,HASH: [{user_value_hash}] 没有找到")
+
 def send_message_to_user(user,message):
     def get_user_window():
         """
@@ -70,13 +82,17 @@ def send_message_to_user(user,message):
 def get_rely():
     controls , myname = get_chat_element()
     text,user = element_2_text(controls,myname)
+    if user == ADMIN_USER:
+        con,_=get_chat_element(Chatbox=False,Msg=True)
+        admin_code(con[-1].Name)
     if '[我说]' in text[-10:]:
         print("由于对方还未回复,跳过")
         return None
     message_list = text_2_message_list(text,user)#聊天消息列表
     if any(i in user for i in USER_DONT_REPLY):#如果昵称在不回复的列表中
         print(f"{user}在不回复的列表中")
-        send_message_to_user(ADMIN_USER, f"用户: {user} 发送了消息: {message_list[-1]['content']}")
+        user_hash=save_name_hash(user)
+        send_message_to_user(ADMIN_USER, f"Hash: [{user_hash}]-->用户:[{user}] 发送了消息: {message_list[-1]['content']}")
         return None
     if len(message_list)>=1:
         input_message_list = message_list[:-1]
@@ -92,9 +108,12 @@ def get_rely():
         back_word = quick_chat('~ o(*￣▽￣*)ブ')
     print(f'OPENAI返回值:{back_word}')
     if 'gotostop' in back_word:
-        send_message_to_user(ADMIN_USER, f"用户: {user} 发送了消息: {message_list[-1]['content']} \n但系统拒绝回答,OPENAI: {back_word} ")
+        user_hash = save_name_hash(user)
+        send_message_to_user(ADMIN_USER, f"Hash:[{user_hash}]-->用户:[{user}] 发送了消息: {message_list[-1]['content']} \n但系统拒绝回答,OPENAI: {back_word} ")
         return None
     return back_word
+
+get_rely()
 
 def start():
     send_message_to_user(ADMIN_USER, f'启动成功 测试: {LLM_load_test} ')
@@ -129,14 +148,14 @@ def start():
                 autoit.send('{ENTER}')
                 close_window(Main=True, Notify=False, close=True)
 
-while True:
-    try:
-        start()  # 尝试启动程序
-    except Exception as e:
-        print(f"发生严重错误，错误信息：{e}")
-        print("尝试重新启动...")
-        time.sleep(2)  # 等待 2 秒后再次尝试
-        try:
-            send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
-        except Exception as inner_error:
-            print(f"发送错误报告失败，错误信息: {inner_error}")
+# while True:
+#     try:
+#         start()  # 尝试启动程序
+#     except Exception as e:
+#         print(f"发生严重错误，错误信息：{e}")
+#         print("尝试重新启动...")
+#         time.sleep(2)  # 等待 2 秒后再次尝试
+#         try:
+#             send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
+#         except Exception as inner_error:
+#             print(f"发送错误报告失败，错误信息: {inner_error}")
