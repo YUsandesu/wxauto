@@ -10,14 +10,14 @@ setup_file_path = os.path.join(desktop_path, setup_file_name)# 拼接文件的�
 def read_txtfile(path):
     """
     格式:XXX:123 #内容注释 --> {'XXX':'123'}
+    REPLACE:A=1;2||B=3 -->D{A:(1,2),B:3}
     :return:返回指定文件中的内容为字典
     """
     data_dict = {}
     with open(path, 'r', encoding='utf-8') as file:
         text = file.read()# 读取文件内容
         # print(text)
-    # 按行分割文本
-    lines = text.strip().split('\n')
+    lines = text.strip().split('\n')# 按行分割文本,返回一个列表型
     # 遍历每一行
     for line in lines:
         if '#' in line: # 去掉'#'后面的内容
@@ -25,19 +25,35 @@ def read_txtfile(path):
         if line.strip()=='':
             continue
         try:
-            the_key, value = line.split(':', 1)# 按冒号分割键和值
-            data_dict[the_key.strip()] = value.strip()# 去除键和值的前后空格，并添加到字典中
+            if 'REPLACE:' in line:
+                rp={}
+                line=line.replace('REPLACE:','')
+                each_replace=line.split('||')
+                for i in each_replace:
+                    key,value_text=i.split('=')
+                    try:
+                        value_list=value_text.split(';')
+                    except Exception as e:
+                        value_list=[value_text]
+                    rp[key] = value_list
+                data_dict['REPLACE'] = rp
+
+
+            else:
+                the_key, value = line.split(':', 1)  # 按冒号分割键和值
+                data_dict[the_key.strip()] = value.strip()  # 去除键和值的前后空格，并添加到字典中
         except Exception as e:
             print(f'"{line}"转换发生错误,已经跳过')
+
     return data_dict
 
 setup_info = read_txtfile(setup_file_path)
+print(setup_info)
 key, url, model = setup_info['KEY'], setup_info['URL'], setup_info['model']
 system_front = setup_info['SYS_F']
 system_down = setup_info['SYS_D']
-print(f'Model:{model}')
 #model='gpt-4o'|'gpt-3.5-turbo'|'o1-mini'
-
+replace_word_list= setup_info['REPLACE']
 def element_2_text(controls,my_name):
     """
     :param controls: >一组control对象
@@ -125,8 +141,7 @@ def chat(message_list,question,system_front=system_front,system_down=system_down
     except Exception as e:
         return f"gotostop---API 调用异常: {str(e)}"
 
-def reduce_error(text, type, del_words_list=[]):
-    _yuehui=['做爱','约炮','啪啪','爱爱','色色','操','干你','屁眼','的逼']
+def reduce_error(text, type, del_words_list=[],replace=replace_word_list):
     if type== 'message_text':
         no_words = ['<--[查看更多消息]\n','收到红包，请在手机上查看']
     elif type== 'output':
@@ -136,9 +151,9 @@ def reduce_error(text, type, del_words_list=[]):
     for word in no_words:
         if word in text:
             text = text.replace(word, '')
-    for word in _yuehui:
-        if word in text:
-            text = text.replace(word, '私下约会')
+    for key,val in replace_word_list.items():
+        for the_word in val:
+            text = text.replace(the_word,key)
     return text
 # 测试
 def quick_chat(question):
