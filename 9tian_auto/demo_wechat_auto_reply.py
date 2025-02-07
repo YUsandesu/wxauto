@@ -35,6 +35,9 @@ def get_rely():
     if len(message_list)>=1:
         input_message_list = message_list[:-1]
         question = message_list[-1]['content']
+        if '[图片]' in question:
+            print(f'{question},暂时还没有照片功能,拒绝回复')
+            return None
         back_word = chat(input_message_list, question)
     else:
         back_word = quick_chat('~ o(*￣▽￣*)ブ')
@@ -52,7 +55,7 @@ while True:
     if is_new_information():
         print('**识别到新消息**,进入等待时间')
         close_window(Main=True, Notify=False, close=True)
-        time.sleep(120)  # 给120秒时间由本人回复
+        time.sleep(2)  # 给120秒时间由本人回复
         autoit.mouse_move(0, 0, 2)
         if not is_new_information():
             print("已经人工回复,重新监听")
