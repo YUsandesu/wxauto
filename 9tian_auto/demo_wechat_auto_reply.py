@@ -62,9 +62,13 @@ def send_message_to_user(user,message):
         return get_chat_user_name()==user
     wait_times=0
     while get_user_window() is False:
+        autoit.send('{ESC}')
+        autoit.send('{ESC}')
+        autoit.send('{ESC}')
+        close_window(Main=True,Notify=False,close=True)
         wait_times+=1
         print("查找失败,重新查找")
-        if wait_times==100:
+        if wait_times==10:
             raise TimeoutError(f"发送消息对象:{user}名称始终不匹配")
         time.sleep(1)
         continue
