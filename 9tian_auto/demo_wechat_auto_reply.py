@@ -32,6 +32,10 @@ USER_DONT_REPLY=setup_info['dontreply']
 ADMIN_USER=setup_info['ADMIN']
 def send_message_to_user(user,message):
     def get_user_window():
+        """
+        调用搜索,找到聊天对象,如果错误返回False,成功返回True
+        :return:
+        """
         refresh_wechat_window(Main=True, Notify=False)
         x, y = get_search_element()
         autoit.mouse_move(x, y, 2)
@@ -43,10 +47,7 @@ def send_message_to_user(user,message):
         autoit.send('{ENTER}')
         autoit.send('{ENTER}')
         time.sleep(1)
-        refresh_wechat_window(Main=True, Notify=False)
-        controls, myname = get_chat_element()
-        _, now_user = element_2_text(controls, myname)
-        return now_user==user
+        return get_chat_user_name()==user
     wait_times=0
     while get_user_window() is False:
         wait_times+=1
@@ -116,7 +117,6 @@ def start():
                 move_to_wechat_sys()
                 autoit.mouse_click()
                 continue
-
             answer = get_rely()
             if answer is not None:
                 autoit.send(answer)

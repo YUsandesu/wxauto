@@ -167,8 +167,10 @@ def get_my_name():
     A_MyIcon = NavigationBox.ButtonControl()
     return A_MyIcon.Name
 
-def get_chat_element():
+def get_chat_element(Chatbox=False,Msg=True):
     """
+    Chatbox:整个聊天窗口(更上一层)
+    Msg:只有信息部分(下层,面积小)
     返回(元素列表,my_name)
     """
     Wechat_main=uia.WindowControl(ClassName='WeChatMainWndForPC', searchDepth=1) #获取对象
@@ -216,9 +218,10 @@ def get_chat_element():
     # back={}
     # back['location']=localcation
     # back['mouse_range']=[c_rect.xcenter(),c_rect.bottom],[c_rect.xcenter(),c_rect.top]
-
-    # controls = GetAllControlList(ChatBox)
-    controls = GetAllControlList(C_MsgList)
+    if Chatbox is True:
+        controls = GetAllControlList(ChatBox)
+    if Msg is True:
+        controls = GetAllControlList(C_MsgList)
     # print(controls)
     message_list=[(i.Name,i.LocalizedControlType,i.ControlType,i.IsContentElement) for i in controls]
     # print(f'获取到message_list:{message_list}')
@@ -268,5 +271,9 @@ def get_send_button():
             center=[i.BoundingRectangle.xcenter(), i.BoundingRectangle.ycenter()]
             return center
 
-# print(message_list)
-# print(is_new_information())
+def get_chat_user_name():
+    refresh_wechat_window(Main=True,Notify=False)
+    con, use = get_chat_element(Chatbox=True, Msg=False)
+    return con[0].Name
+
+print(get_chat_user_name())
