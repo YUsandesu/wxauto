@@ -103,7 +103,8 @@ def get_rely():
         question = message_list[-1]['content']#最新的一条消息
         if '[图片]' in question:
             print(f'{question},暂时还没有照片功能')
-            send_message_to_user(ADMIN_USER, f"用户: {user} 发送了一张照片")
+            user_hash = save_name_hash(user)
+            send_message_to_user(ADMIN_USER, f"Hash: [{user_hash}]-->用户: {user} 发送了一张照片")
             return None
         back_word = chat(input_message_list, question)
     elif len(message_list)==1:
