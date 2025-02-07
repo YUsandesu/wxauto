@@ -127,7 +127,7 @@ def chat(message_list,question,system_front=system_front,system_down=system_down
     data = {
         "model": model,
         "messages": input_message,
-        "temperature": 1
+        "temperature": 0.2
     }
 
     try:
@@ -142,6 +142,7 @@ def chat(message_list,question,system_front=system_front,system_down=system_down
         return f"gotostop---API 调用异常: {str(e)}"
 
 def reduce_error(text, type, del_words_list=[],replace=replace_word_list):
+
     if type== 'message_text':
         no_words = ['<--[查看更多消息]\n','收到红包，请在手机上查看']
     elif type== 'output':
@@ -151,11 +152,14 @@ def reduce_error(text, type, del_words_list=[],replace=replace_word_list):
     for word in no_words:
         if word in text:
             text = text.replace(word, '')
-    for key,val in replace_word_list.items():
+    print(f'准备:{text}')
+    for key,val in replace.items():
         for the_word in val:
+            print(f'替换{the_word}为{key}')
             text = text.replace(the_word,key)
     return text
 # 测试
 def quick_chat(question):
-    chat([{'role': 'assistant', 'content': "初次见面,很高兴认识你."}], question)
+    return chat([{'role': 'assistant', 'content': "初次见面,很高兴认识你."},
+                  {'role': 'system', 'content': '要特别注意用户的提问是否包含口语,例如:"在哪边"的意思是住在哪里'}], question)
 print( quick_chat('你好,我是MCyj,你在哪边?') )

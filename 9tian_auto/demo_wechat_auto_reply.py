@@ -39,43 +39,44 @@ def get_rely():
             print(f'{question},暂时还没有照片功能,拒绝回复')
             return None
         back_word = chat(input_message_list, question)
+    elif len(message_list)==1:
+        back_word = quick_chat(message_list[0])
     else:
         back_word = quick_chat('~ o(*￣▽￣*)ブ')
     print(f'OPENAI返回值:{back_word}')
     if 'gotostop' in back_word:
         return None
     return reduce_error(back_word,'output')
-
-# wechat_shot_screen(True, False, False)
-
-while True:
-    close_window(Main=True, Notify=False, close=True)
-    time.sleep(1.1)
-    autoit.mouse_move(0, 0,2)
-    if is_new_information():
-        print('**识别到新消息**,进入等待时间')
+def start():
+    while True:
         close_window(Main=True, Notify=False, close=True)
-        time.sleep(2)  # 给120秒时间由本人回复
+        time.sleep(1.1)
         autoit.mouse_move(0, 0, 2)
-        if not is_new_information():
-            print("已经人工回复,重新监听")
-            time.sleep(3)
-            continue
-        move_to_wechat_sys()
-        autoit.mouse_click()
-        while refresh_wechat_window(Main=True,Notify=False) is False:
+        if is_new_information():
+            print('**识别到新消息**,进入等待时间')
+            close_window(Main=True, Notify=False, close=True)
+            time.sleep(2)  # 给120秒时间由本人回复
+            autoit.mouse_move(0, 0, 2)
+            if not is_new_information():
+                print("已经人工回复,重新监听")
+                time.sleep(3)
+                continue
             move_to_wechat_sys()
             autoit.mouse_click()
-            continue
+            while refresh_wechat_window(Main=True, Notify=False) is False:
+                move_to_wechat_sys()
+                autoit.mouse_click()
+                continue
 
-        answer=get_rely()
-        if answer is not None:
-            autoit.send(answer)
-            time.sleep(1)
-            autoit.send('{ENTER}')
-            autoit.send('{ENTER}')
-            autoit.send('{ENTER}')
-            time.sleep(1)
-            autoit.send('{ENTER}')
-            autoit.send('{ENTER}')
-            close_window(Main=True, Notify=False, close=True)
+            answer = get_rely()
+            if answer is not None:
+                autoit.send(answer)
+                time.sleep(1)
+                autoit.send('{ENTER}')
+                autoit.send('{ENTER}')
+                autoit.send('{ENTER}')
+                time.sleep(1)
+                autoit.send('{ENTER}')
+                autoit.send('{ENTER}')
+                close_window(Main=True, Notify=False, close=True)
+start()
