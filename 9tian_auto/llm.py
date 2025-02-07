@@ -145,7 +145,7 @@ def reduce_error(text, type, del_words_list=[],replace=replace_word_list):
     if type== 'message_text':
         no_words = ['<--[查看更多消息]\n','收到红包，请在手机上查看']
     elif type== 'output':
-        no_words = ['[我说]', '<--', '-->', '[动画表情]', '"', '\n','以下为新消息','收到红包，请在手机上查看']
+        no_words = ['[我说]', '<--', '-->', '"', '\n','以下为新消息','收到红包，请在手机上查看']
     else: raise ValueError("不符合规范")
     no_words.extend(del_words_list)
     for word in no_words:
