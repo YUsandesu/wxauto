@@ -126,6 +126,7 @@ def chat(message_list,question,system_front=system_front,system_down=system_down
         return f"gotostop---API 调用异常: {str(e)}"
 
 def reduce_error(text, type, del_words_list=[]):
+    minganci=['做爱','约炮','啪啪','爱爱','色色']
     if type== 'message_text':
         no_words = ['<--[查看更多消息]\n','收到红包，请在手机上查看']
     elif type== 'output':
@@ -135,6 +136,9 @@ def reduce_error(text, type, del_words_list=[]):
     for word in no_words:
         if word in text:
             text = text.replace(word, '')
+    for word in minganci:
+        if word in text:
+            text = text.replace(word, '私下约会')
     return text
 # 测试
 def quick_chat(question):
