@@ -10,7 +10,8 @@ setup_file_path = os.path.join(desktop_path, setup_file_name)# 拼接文件的�
 def read_txtfile(path):
     """
     格式:XXX:123 #内容注释 --> {'XXX':'123'}
-    REPLACE:A=1;2||B=3 -->D{A:(1,2),B:3}
+        XXX_dict:A=1;2||B=3 -->XXX{A:(1,2),B:3}
+
     :return:返回指定文件中的内容为字典
     """
     data_dict = {}
@@ -25,20 +26,25 @@ def read_txtfile(path):
         if line.strip()=='':
             continue
         try:
-            if 'REPLACE:' in line:
-                rp={}
-                line=line.replace('REPLACE:','')
-                each_replace=line.split('||')
-                for i in each_replace:
+            if '_list:' in line:
+                back_list=[]
+                tittle,infor=line.split('_list:',1)
+                each=infor.split('||')
+                for i in each:
+                    back_list.append(i)
+                data_dict[tittle]=back_list
+            elif '_dict:' in line:
+                back_dict={}
+                tittle,infor=line.split('_dict:',1)
+                each_dict_infor=infor.split('||')
+                for i in each_dict_infor:
                     key,value_text=i.split('=')
                     try:
                         value_list=value_text.split(';')
                     except Exception as e:
                         value_list=[value_text]
-                    rp[key] = value_list
-                data_dict['REPLACE'] = rp
-
-
+                    back_dict[key] = value_list
+                data_dict[tittle] = back_dict
             else:
                 the_key, value = line.split(':', 1)  # 按冒号分割键和值
                 data_dict[the_key.strip()] = value.strip()  # 去除键和值的前后空格，并添加到字典中
@@ -106,7 +112,6 @@ def text_2_message_list(text,user):
         back_list.append(message_dict)
     return back_list
 
-
 def chat(message_list,question,system_front=system_front,system_down=system_down,base_url=url,key=key,model=model):
     """
     message是一个列表,其中每个项为dict
@@ -152,14 +157,14 @@ def reduce_error(text, type, del_words_list=[],replace=replace_word_list):
     for word in no_words:
         if word in text:
             text = text.replace(word, '')
-    print(f'准备:{text}')
     for key,val in replace.items():
         for the_word in val:
-            print(f'替换{the_word}为{key}')
             text = text.replace(the_word,key)
     return text
 # 测试
+
 def quick_chat(question):
     return chat([{'role': 'assistant', 'content': "初次见面,很高兴认识你."},
                   {'role': 'system', 'content': '要特别注意用户的提问是否包含口语,例如:"在哪边"的意思是住在哪里'}], question)
-print( quick_chat('你好,我是MCyj,你在哪边?') )
+LLM_load_test=quick_chat('你好,我是MCyj,你在哪边?')
+print(  LLM_load_test )

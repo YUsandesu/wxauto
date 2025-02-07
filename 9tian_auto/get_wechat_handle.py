@@ -31,6 +31,9 @@ def close_wechat_Main_Window():
                     close_wechat_Main_Window()#循环调用
 
 def refresh_wechat_window(Main=False,Notify=True,):
+    """
+    刷新微信窗口到可见窗台.
+    """
     wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表
     for t, w in enumerate(wechat_windows):
         if w.class_name() == 'WeChatMainWndForPC' and Main:  # 微信主窗口的类名：WeChatMainWndForPC，可见时：'style': 370081792
@@ -220,6 +223,21 @@ def get_chat_element():
     message_list=[(i.Name,i.LocalizedControlType,i.ControlType,i.IsContentElement) for i in controls]
     # print(f'获取到message_list:{message_list}')
     return controls,get_my_name()
+
+def get_search_element():
+    """
+    返回search元素的屏幕坐标
+    """
+    Wechat_main=uia.WindowControl(ClassName='WeChatMainWndForPC', searchDepth=1) #获取对象
+    m_rect=Wechat_main.BoundingRectangle
+    MainControl1 = [i for i in Wechat_main.GetChildren() if not i.ClassName][0]
+    MainControl2 = MainControl1.GetFirstChildControl()
+    NavigationBox, SessionBox, ChatBox = MainControl2.GetChildren()
+    # 初始化聊天列表，以B开头
+    B_Search = SessionBox.EditControl(Name='搜索')
+    return B_Search.BoundingRectangle.xcenter(), B_Search.BoundingRectangle.ycenter()
+
+    return B_Search
 
 def GetAllControlList(ele):
     def findall(ele, n=0, text=[]):
