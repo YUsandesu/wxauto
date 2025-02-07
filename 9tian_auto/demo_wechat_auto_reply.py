@@ -1,4 +1,8 @@
 import time
+from time import sleep
+
+from fontTools.misc.cython import returns
+
 from get_wechat_handle import *
 from llm import *
 import autoit
@@ -27,18 +31,30 @@ import os
 USER_DONT_REPLY=setup_info['dontreply']
 ADMIN_USER=setup_info['ADMIN']
 def send_message_to_user(user,message):
-    refresh_wechat_window(Main=True,Notify=False)
-    x,y=get_search_element()
-    autoit.mouse_move(x,y,2)
-    autoit.mouse_click()
-    time.sleep(1)
-    autoit.send(user)
-    time.sleep(1)
-    autoit.send('{ENTER}')
-    autoit.send('{ENTER}')
-    autoit.send('{ENTER}')
-    time.sleep(1)
-    refresh_wechat_window(Main=True, Notify=False)
+    def get_user_window():
+        refresh_wechat_window(Main=True, Notify=False)
+        x, y = get_search_element()
+        autoit.mouse_move(x, y, 2)
+        autoit.mouse_click()
+        time.sleep(1)
+        autoit.send(user)
+        time.sleep(1)
+        autoit.send('{ENTER}')
+        autoit.send('{ENTER}')
+        autoit.send('{ENTER}')
+        time.sleep(1)
+        refresh_wechat_window(Main=True, Notify=False)
+        controls, myname = get_chat_element()
+        _, now_user = element_2_text(controls, myname)
+        return now_user==user
+    wait_times=0
+    while get_user_window() is False:
+        wait_times+=1
+        print("查找失败,重新查找")
+        if wait_times==100:
+            raise TimeoutError(f"发送消息对象:{user}名称始终不匹配")
+        time.sleep(1)
+        continue
     time.sleep(1)
     autoit.send(message)
     time.sleep(1)
@@ -80,7 +96,7 @@ def get_rely():
     return back_word
 
 def start():
-    send_message_to_user(ADMIN_USER, LLM_load_test)
+    send_message_to_user(ADMIN_USER, f'启动成功 测试: {LLM_load_test} ')
     while True:
         close_window(Main=True, Notify=False, close=True)
         time.sleep(1.1)
@@ -112,4 +128,15 @@ def start():
                 autoit.send('{ENTER}')
                 autoit.send('{ENTER}')
                 close_window(Main=True, Notify=False, close=True)
-start()
+
+while True:
+    try:
+        start()  # 尝试启动程序
+    except Exception as e:
+        print(f"发生严重错误，错误信息：{e}")
+        print("尝试重新启动...")
+        time.sleep(2)  # 等待 2 秒后再次尝试
+        try:
+            send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
+        except Exception as inner_error:
+            print(f"发送错误报告失败，错误信息: {inner_error}")
