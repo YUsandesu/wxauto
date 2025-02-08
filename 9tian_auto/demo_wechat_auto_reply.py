@@ -62,9 +62,13 @@ def send_message_to_user(user,message):
         return get_chat_user_name()==user
     wait_times=0
     while get_user_window() is False:
+        autoit.send('{ESC}')
+        autoit.send('{ESC}')
+        autoit.send('{ESC}')
+        close_window(Main=True,Notify=False,close=True)
         wait_times+=1
         print("查找失败,重新查找")
-        if wait_times==100:
+        if wait_times==10:
             raise TimeoutError(f"发送消息对象:{user}名称始终不匹配")
         time.sleep(1)
         continue
@@ -99,7 +103,8 @@ def get_rely():
         question = message_list[-1]['content']#最新的一条消息
         if '[图片]' in question:
             print(f'{question},暂时还没有照片功能')
-            send_message_to_user(ADMIN_USER, f"用户: {user} 发送了一张照片")
+            user_hash = save_name_hash(user)
+            send_message_to_user(ADMIN_USER, f"Hash: [{user_hash}]-->用户: {user} 发送了一张照片")
             return None
         back_word = chat(input_message_list, question)
     elif len(message_list)==1:
@@ -113,7 +118,6 @@ def get_rely():
         return None
     return back_word
 
-get_rely()
 
 def start():
     send_message_to_user(ADMIN_USER, f'启动成功 测试: {LLM_load_test} ')
@@ -148,14 +152,14 @@ def start():
                 autoit.send('{ENTER}')
                 close_window(Main=True, Notify=False, close=True)
 
-# while True:
-#     try:
-#         start()  # 尝试启动程序
-#     except Exception as e:
-#         print(f"发生严重错误，错误信息：{e}")
-#         print("尝试重新启动...")
-#         time.sleep(2)  # 等待 2 秒后再次尝试
-#         try:
-#             send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
-#         except Exception as inner_error:
-#             print(f"发送错误报告失败，错误信息: {inner_error}")
+while True:
+    try:
+        start()  # 尝试启动程序
+    except Exception as e:
+        print(f"发生严重错误，错误信息：{e}")
+        print("尝试重新启动...")
+        time.sleep(2)  # 等待 2 秒后再次尝试
+        try:
+            send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
+        except Exception as inner_error:
+            print(f"发送错误报告失败，错误信息: {inner_error}")
