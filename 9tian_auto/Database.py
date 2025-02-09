@@ -3,10 +3,12 @@ import json
 import hashlib
 import warnings
 
+from dask.array import around
+from holoviews.examples.gallery.apps.bokeh.game_of_life import update
+from sympy.physics.units import years
+
 from demo_wechat_auto_reply import *
 from datetime import datetime, timedelta
-
-
 
 def is_int(num):  # 判断是否为整数
     try:
@@ -32,7 +34,7 @@ def read_datetime(text):
     today = datetime.today()
     date = ""
     the_time = ""
-
+    year=''
     if ':' in text:
         the_time = text.split(":", maxsplit=1)
         try:
@@ -44,7 +46,9 @@ def read_datetime(text):
             return None
     else:
         return None
-
+    if '年 ' in text:
+        year = text.text.split("年 ", maxsplit=1)[0]
+        text = text.text.split("年 ", maxsplit=1)[1]
     if " " in text:
         text = text.split(" ", maxsplit=1)
         date, the_time = text[0], text[1]
@@ -67,25 +71,66 @@ def read_datetime(text):
         else:
             print(f"{text}未知格式, 无法识别")
             return None  # 未知格式
-
+    if year != '':
+        return f'{year}年 {today.month}月{today.day}日 {time_h}:{time_m}'
     return f'{today.month}月{today.day}日 {time_h}:{time_m}'
+def read_CHN_date(text):
+    """
+    输入格式: 例: 12月1日 12:02
+    特例: 2022年 12月12日 xx:xx
+    """
+    today = datetime.today()
+    if '年' in text:
+        year = text.split('年 ',maxsplit=1)[0]
+        text = text.split('年 ',maxsplit=1)[1]
+    else:year = today.year
+    date_format = "%Y-%m-%d %H:%M"  # 包括日期和时间
+    mouth = text.split('月',maxsplit=1)[0]
+    day = text.split('月',maxsplit=1)[1].split('日',maxsplit=1)[0]
+    the_time = text.split(":", maxsplit=1)
+    time_h, time_m = the_time[0][-2:], the_time[1][:2]
+    parsed_date = datetime.strptime(f'{year}-{mouth}-{day} {time_h}:{time_m}', date_format)
+    return parsed_date
+def get_time_gap_CHN(A,B):
+    """
+    求AB两个时间差,优先返回大单位,例如3天10小时20分钟,返回:3天
+    """
+    A=read_CHN_date(A)
+    B=read_CHN_date(B)
+    gap_seconds=abs((A-B).total_seconds())
+    gap_day = round(gap_seconds // 86400)
+    gap_hours= round(gap_seconds % 86400 // 3600)
+    gap_minutes= round(gap_seconds % 86400 % 3600 // 60)
+    back=''
+    if gap_day != 0:
+        back = f'{back}{gap_day}天'
+        return f'{back}'
+    if gap_hours != 0:
+        back = f'{back}{gap_hours}小时'
+        return f'{back}'
+    if gap_minutes != 0:
+        back = f'{back}{gap_minutes}分钟'
+    if back != '':
+        return f'{back}'
+    if A==B:
+        warnings.warn('时间相同,返回None')
+        return None
+    raise ValueError(f'时间识别失败{A}-{B}')
 
-
-def element_2_text(controls):
+def _read_element(controls):
     """
     此程序用于将元素列表转换为易读信息
     [ [时间,[ user_name,xx],[me,xx],[gpt,xxx],[money,money],[event,[图片] ] ],[时间,...]]
     :param controls: >一组control对象
     :return: (一组纯文本的消息记录,聊天的对象名)
     """
-    event_message='[图片]','[位置]','语音通话','视频通话','[语音]','[动画表情]','[链接]'#完整信息:[语音]?秒 语音通话 对方已取消 视频通话 对方已取消
+    event_message='[图片]','[位置]','语音通话','视频通话','[语音]','[动画表情]','[链接]','[视频号]'#完整信息:[语音]?秒 语音通话 对方已取消 视频通话 对方已取消
     important_event_message = '收到红包，请在手机上查看', '微信转账'
     useless_message= {'以下为新消息','以下是新消息'}#使用set速度更快
 
     me = get_my_name()
     user_name = get_chat_user_name()
     name = '_'
-    content= ''
     the_time = ''
     chat_list=['_'] #其中填写了占位符,占位日期 [日期,chat_detail,chat_detail]
     chat_detail=['_','_'] #其中填写了占位符,占位用户名 [对象,内容]
@@ -162,24 +207,126 @@ def element_2_text(controls):
     the_new_message=chat_list #此时因为没有新的时间出现,不会上传chat_list,所以这是最新的消息
     return back,user_name,the_new_message
 
-con = get_chat_element()[0]
-print(con)
-for i in con:
-    if i.LocalizedControlType == '文本':
-        continue
-    print(f'名称:{i.Name}||{i.LocalizedControlType}')
-a,b,c=element_2_text(con)
-print(a)
-print(b)
-print(c)
-#TODO 重新修改demo_wechat 来符合新标准
+def read_new_message_list():
+    """
+    获取最新时间的消息[内容,用户名]
+    """
+    con = get_chat_element()
+    _,_,back= _read_element(con)
+    return back
 
+def read_message_list(max_length=None):
+    """
+    Args:
+        max_length: 最大长度(以对方消息为计数),None-->无限长度
 
-# 生成 3 个字符的哈希值
-def generate_hash(input_string):
+    Returns:[时间,用户名,内容],[...]
+    """
+    if max_length is None:
+        max_length = 9999
+    now_length=0
+    con = get_chat_element()
+    back = []
+    chat_list=[]
+    message_list,user_name,the_new_message = _read_element(con)
+    the_time = the_new_message[0]
+    chat_list=[the_time]
+    for chat_detail in the_new_message[1:][::-1]:
+       if chat_detail[0]==user_name:
+           now_length=now_length+1
+       chat_list.append([chat_detail[0],chat_detail[1]])
+       if now_length >= max_length:
+           break
+    back.append([chat_list[0]]+chat_list[1:][::-1])
+
+    for time_chat in message_list[::-1]:#倒序
+        the_time = time_chat[0]
+        chat_list = [the_time]
+        if  now_length >= max_length:
+            break
+        for chat_detail in time_chat[::-1][:-1]:#倒序但切掉time信息
+            user = chat_detail[0]
+            message = chat_detail[1]
+            chat_list.insert(1,[user,message])
+            if user == user_name:
+                now_length=now_length+1
+            if now_length>=max_length:
+                break
+        back.append([chat_list[0]]+chat_list[1:])
+
+    return back[::-1]
+
+def message_to_llm_list(message_list):
+    back=[]
+    update_dict={}
+    for t,chat_list in enumerate(message_list):
+        if t==0:#第一个项 是时间
+            last_time = chat_list[0]
+        else:
+            gap=get_time_gap_CHN(chat_list[0],last_time)
+            back.append({'role':'system','content':f'{gap}之后'})
+            last_time = chat_list[0]
+        for chat_message in chat_list[1:]:
+
+            if chat_message[0] == 'me':
+                role = 'assistant'
+            elif 'event' in chat_message[0]:
+                user_from = chat_message[0].split('_',maxsplit=1)[1]
+                if user_from == 'me':
+                    content = f'对方看到了我发送的{chat_message[1]}'
+                else:
+                    content = f'对方向我发送了一个{chat_message[1]}'
+                back.append({'role':'system','content':content})
+                continue
+            else:
+                role = 'user'
+            back.append({'role':role,'content':chat_message[1]})
+    today = datetime.today()
+    today_CHN=f'{today.month}月{today.day}日 {today.hour}:{today.minute}'
+    now_gap = get_time_gap_CHN(today_CHN,last_time)
+    if now_gap is None:
+        back.append({'role': 'system', 'content': f'现在的时间是:{today_CHN}'})
+    back.append({'role': 'system', 'content': f'过了{now_gap}之后...现在的时间是:{today_CHN}'})
+    return back
+
+def message_to_easy_read(message_list):
+    back_str=''
+    for t,chat_list in enumerate(message_list):
+        if t==0:#第一个项 是时间
+            last_time = chat_list[0]
+        else:
+            gap=get_time_gap_CHN(chat_list[0],last_time)
+            back_str= back_str+ f'过了{gap}之后\n'
+            last_time = chat_list[0]
+        for chat_message in chat_list[1:]:
+            if chat_message[0] == 'me':
+                role = '我'
+            elif 'event' in chat_message[0]:
+                user_from = chat_message[0].split('_',maxsplit=1)[1]
+                if user_from == 'me':
+                    back_str = back_str + f'对方看到了我发送的{chat_message[1]}\n'
+                else:
+                    back_str = back_str + f'对方向我发送了一个{chat_message[1]}\n'
+                continue
+            else:
+                role = '对方'
+            back_str = back_str + f'{role}说:{chat_message[1]}\n'
+    today = datetime.today()
+    today_CHN = f'{today.month}月{today.day}日 {today.hour}:{today.minute}'
+    now_gap = get_time_gap_CHN(today_CHN, last_time)
+    back_str = back_str + f'{now_gap}之后...'
+    return back_str
+
+# print(read_message_list())
+
+def generate_hash(input_string, str_length=4):
+    """
+    获取字符的哈希值
+    str_length:保留位数
+    """
     hash_object = hashlib.sha256()
     hash_object.update(input_string.encode('utf-8'))
-    return hash_object.hexdigest()[:4]  # 取前三个字符
+    return hash_object.hexdigest()[:str_length]  # 取前三个字符
 
 def save_name_hash(name):
     directory = "."  # 目标目录
@@ -215,6 +362,20 @@ def save_name_hash(name):
 
     return hash_value  # 返回哈希值
 
+front={'role':"system",'content':"你是一个学习用户对话风格的'人类',对话场景处于即时聊天软件,请不要使用标点符号而是使用空格代替。"}
+back={'role':"system",'content':"如果不用回答,而是继续沉默,请回复:'gotostop no answer'加上合理的理由,最好相比我的回答更加热情一些,不要让对方发现你不是人类,因为使用自动回复会让对方感到不被不尊重"}
+back2={'role':"system",'content':"如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'"}
+back3={'role':"system",'content':"请直接给出合适的回答或者'gotostop':"}
+mes_list= read_message_list()
+print(mes_list)
+llm=message_to_llm_list(mes_list)
+print(llm)
+
+print(
+    chat_post([front]+llm+[back]+[back2]+[back3],0.3)
+)
+
+
 def hash_2_user(value_hash):
     json_file_path = os.path.join(".", "user_data.json")
 
@@ -232,4 +393,5 @@ def hash_2_user(value_hash):
             return None  # 解析失败，返回 None
 
     return None  # 没找到匹配的哈希值
+
 

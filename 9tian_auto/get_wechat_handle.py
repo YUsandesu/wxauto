@@ -225,7 +225,7 @@ def get_chat_element(Chatbox=False,Msg=True):
     # print(controls)
     message_list=[(i.Name,i.LocalizedControlType,i.ControlType,i.IsContentElement) for i in controls]
     # print(f'获取到message_list:{message_list}')
-    return controls,get_my_name()
+    return controls
 
 def get_search_element():
     """
@@ -273,7 +273,6 @@ def get_send_button():
 
 def get_chat_user_name():
     refresh_wechat_window(Main=True,Notify=False)
-    con, use = get_chat_element(Chatbox=True, Msg=False)
+    con = get_chat_element(Chatbox=True, Msg=False)
     return con[0].Name
 
-print(get_chat_user_name())
