@@ -3,9 +3,6 @@ import json
 import hashlib
 import warnings
 
-from dask.array import around
-from holoviews.examples.gallery.apps.bokeh.game_of_life import update
-from sympy.physics.units import years
 
 from demo_wechat_auto_reply import *
 from datetime import datetime, timedelta
@@ -77,16 +74,15 @@ def read_datetime(text):
 def read_CHN_date(text):
     """
     输入格式: 例: 12月1日 12:02
-    特例: 2022年 12月12日 xx:xx
+    特例: 2022年12月12日 xx:xx
     """
     today = datetime.today()
     if '年' in text:
-        year = text.split('年 ',maxsplit=1)[0]
-        text = text.split('年 ',maxsplit=1)[1]
+        year,text=text.split('年',maxsplit=1)
     else:year = today.year
     date_format = "%Y-%m-%d %H:%M"  # 包括日期和时间
-    mouth = text.split('月',maxsplit=1)[0]
-    day = text.split('月',maxsplit=1)[1].split('日',maxsplit=1)[0]
+    mouth = text.split('月',maxsplit=1)[0].strip()
+    day = text.split('月',maxsplit=1)[1].split('日',maxsplit=1)[0].strip()
     the_time = text.split(":", maxsplit=1)
     time_h, time_m = the_time[0][-2:], the_time[1][:2]
     parsed_date = datetime.strptime(f'{year}-{mouth}-{day} {time_h}:{time_m}', date_format)
@@ -289,28 +285,32 @@ def message_to_llm_list(message_list):
     back.append({'role': 'system', 'content': f'过了{now_gap}之后...现在的时间是:{today_CHN}'})
     return back
 
-def message_to_easy_read(message_list):
+def _message_to_easy_read(message_list, time_inf=True, user_inf=True, me_inf=True, event_inf=True):
     back_str=''
     for t,chat_list in enumerate(message_list):
         if t==0:#第一个项 是时间
             last_time = chat_list[0]
         else:
             gap=get_time_gap_CHN(chat_list[0],last_time)
-            back_str= back_str+ f'过了{gap}之后\n'
+            if time_inf:back_str= back_str+ f'过了{gap}之后\n'
             last_time = chat_list[0]
         for chat_message in chat_list[1:]:
+            # print(chat_message)
             if chat_message[0] == 'me':
                 role = '我'
             elif 'event' in chat_message[0]:
                 user_from = chat_message[0].split('_',maxsplit=1)[1]
                 if user_from == 'me':
-                    back_str = back_str + f'对方看到了我发送的{chat_message[1]}\n'
+                    if event_inf:back_str = back_str + f'对方看到了我发送的{chat_message[1]}\n'
                 else:
-                    back_str = back_str + f'对方向我发送了一个{chat_message[1]}\n'
+                    if event_inf:back_str = back_str + f'对方向我发送了一个{chat_message[1]}\n'
                 continue
             else:
                 role = '对方'
-            back_str = back_str + f'{role}说:{chat_message[1]}\n'
+            if user_inf and role=='对方':
+                back_str = back_str + f'{role}说:{chat_message[1]}\n'
+            if me_inf and role=='我':
+                back_str = back_str + f'{role}说:{chat_message[1]}\n'
     today = datetime.today()
     today_CHN = f'{today.month}月{today.day}日 {today.hour}:{today.minute}'
     now_gap = get_time_gap_CHN(today_CHN, last_time)
@@ -359,22 +359,99 @@ def save_name_hash(name):
     # 重新写入 JSON 文件（格式化，保持 UTF-8）
     with open(json_file_path, "w", encoding="utf-8") as json_file:
         json.dump(data, json_file, indent=4, ensure_ascii=False)
-
+    print(f"{name}-->{hash_value}")
     return hash_value  # 返回哈希值
 
-front={'role':"system",'content':"你是一个学习用户对话风格的'人类',对话场景处于即时聊天软件,请不要使用标点符号而是使用空格代替。"}
-back={'role':"system",'content':"如果不用回答,而是继续沉默,请回复:'gotostop no answer'加上合理的理由,最好相比我的回答更加热情一些,不要让对方发现你不是人类,因为使用自动回复会让对方感到不被不尊重"}
-back2={'role':"system",'content':"如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'"}
-back3={'role':"system",'content':"请直接给出合适的回答或者'gotostop':"}
-mes_list= read_message_list()
-print(mes_list)
-llm=message_to_llm_list(mes_list)
-print(llm)
+def load_json_file_dict(file_name):
+    directory = "."  # 目标目录
+    os.makedirs(directory, exist_ok=True)  # 确保目录存在
+    json_file_path = os.path.join(directory, file_name)
+    try:
+        with open(json_file_path, "r", encoding="utf-8") as json_file:
+            data = json.load(json_file)  # 读取 JSON 数据
+            if not isinstance(data, dict):
+                warnings.warn(f'数据不是字典: {data}')
+    except (FileNotFoundError, json.JSONDecodeError):  # 文件不存在或 JSON 解析错误
+        data = {}
+        with open(json_file_path, "w", encoding="utf-8") as json_file:
+            json.dump(data, json_file, indent=4, ensure_ascii=False)
+    return data
+def save_json_file_dict(file_name, data):
+    directory = "."  # 目标目录
+    os.makedirs(directory, exist_ok=True)  # 确保目录存在
+    json_file_path = os.path.join(directory, file_name)
+    # 确保数据是字典类型，如果不是则进行转换
+    if not isinstance(data, dict):
+        warnings.warn(f'传入的数据不是字典: {data}')
+    try:
+        with open(json_file_path, "w", encoding="utf-8") as json_file:
+            json.dump(data, json_file, indent=4, ensure_ascii=False)  # 保存字典到 JSON 文件
+    except Exception as e:
+        warnings.warn(f"保存文件时发生错误: {e}")
+        # 如果保存失败，创建一个新的空 JSON 文件
+        try:
+            with open(json_file_path, "w", encoding="utf-8") as json_file:
+                json.dump({}, json_file, indent=4, ensure_ascii=False)  # 创建一个空字典文件
+            warnings.warn(f"由于保存失败，已创建空的 JSON 文件: {json_file_path}")
+        except Exception as e:
+            warnings.warn(f"创建空文件时发生错误: {e}")
 
-print(
-    chat_post([front]+llm+[back]+[back2]+[back3],0.3)
-)
 
+def save_learning_data(text,user_name):
+    user_hash=generate_hash(user_name)
+    data=load_json_file_dict('learning_Data')
+    if user_hash in data:
+        last_data=data[user_hash]
+
+
+
+def learning_from_text(message_easy_read):
+    """
+    通过文本学习当前聊天窗口的对话内容
+    使用o1-mini筛选信息降低噪声
+    """
+    mes_list = read_message_list()
+    text = _message_to_easy_read(mes_list)
+    front = user_json("下面是一段聊天记录,请为我是可以用在通用场合(对于任何人都适用)的而不是在某些特定情况的回复."
+                      "格式以对方说在前,我回复在后,只保留我回答对方话的对话组."
+                      "请以 '对方说:xxx\n我说:xxx' 的格式给我一些对话组,不要修改原文的格式,也不要输出多余的内容."
+                      "如果不确定是否有强烈关联,或者可能存在特定语境(此时回复对于其他人不适用,例如回复包含具体时间,特定物品),请放弃输出,宁可数量少也不要错误."
+                      "只使用用原文内容,不要自己擅自添加新的内容")
+    back=chat_post([front,user_json(text)],model='o1-mini',temperature=1)
+    if 'gotostop' in back:
+        warnings.warn(f'输出失败:{back}')
+        return None
+    back_lines=back.split("\n")
+    back_list=[]
+    chain=[]
+    for line in back_lines:
+        if '对方说:' in line:
+            chain.append(line)
+        if '我说:' in line:
+            chain.append(line)
+            back_list.append(chain)
+            chain=[]
+        else:continue
+    return back_list
+
+
+#测试能否从当前打开的聊天界面获取信息并生成回复
+def do_test():
+    front = {'role': "system",
+             'content': "你是一个学习用户对话风格的'人类',对话场景处于即时聊天软件,请不要使用标点符号而是使用空格代替。"}
+    back = {'role': "system",
+            'content': "如果不用回答,而是继续沉默,请回复:'gotostop no answer'加上合理的理由,最好相比我的回答更加热情一些,不要让对方发现你不是人类,因为使用自动回复会让对方感到不被不尊重"}
+    back2 = {'role': "system",
+             'content': "如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'"}
+    back3 = {'role': "system", 'content': "请直接给出合适的回答或者'gotostop':"}
+    mes_list = read_message_list()
+    print(mes_list)
+    llm = message_to_llm_list(mes_list)
+    print(llm)
+
+    print(
+        chat_post([front] + llm + [back] + [back2] + [back3], 0.3)
+    )
 
 def hash_2_user(value_hash):
     json_file_path = os.path.join(".", "user_data.json")
@@ -391,7 +468,6 @@ def hash_2_user(value_hash):
                         return entry.get("name")  # 找到匹配的哈希值，返回名字
         except json.JSONDecodeError:
             return None  # 解析失败，返回 None
-
     return None  # 没找到匹配的哈希值
 
 

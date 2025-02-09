@@ -54,12 +54,13 @@ def read_txtfile(path):
     return data_dict
 
 setup_info = read_txtfile(setup_file_path)
-print(setup_info)
+print(f'初始化内容:{setup_info}')
 key, url, model = setup_info['KEY'], setup_info['URL'], setup_info['model']
 system_front = setup_info['SYS_F']
 system_down = setup_info['SYS_D']
 #model='gpt-4o'|'gpt-3.5-turbo'|'o1-mini'
 replace_word_list= setup_info['REPLACE']
+
 def element_2_text(controls,my_name):
     """
     :param controls: >一组control对象
@@ -112,6 +113,37 @@ def text_2_message_list(text,user):
         back_list.append(message_dict)
     return back_list
 
+def chat_post(post_list,temperature=0.2,timeout_seconds=60,base_url=url,key=key,model=model):
+    """
+    post_list 一组字典列表
+    """
+    print(post_list)
+    url = base_url  # API 地址
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}"  # API 密钥
+    }
+
+    data = {
+        "model": model,
+        "messages": post_list,
+        "temperature": temperature
+    }
+
+    try:
+        response = requests.post(url, json=data, headers=headers , timeout=timeout_seconds)
+        if response.status_code == 200:
+            # return response.json()  # 返回 JSON 数据
+            back = response.json()
+            return back['choices'][0]['message']['content']
+        else:
+            return f"gotostop---API 调用失败，状态码: {response.status_code}, 响应内容: {response.text}"
+    except requests.exceptions.Timeout:
+        return f"gotostop---请求超时"
+    except Exception as e:
+        return f"gotostop---API 调用异常: {str(e)}"
+
+
 def chat(message_list,question,system_front=system_front,system_down=system_down,base_url=url,key=key,model=model):
     """
     message是一个列表,其中每个项为dict
@@ -161,10 +193,29 @@ def reduce_error(text, type, del_words_list=[],replace=replace_word_list):
         for the_word in val:
             text = text.replace(the_word,key)
     return text
-# 测试
+
+def user_json(content):
+    """
+        创建一个user角色的JSON块(字典块)
+        """
+    message = {'role': "user",
+               'content': content}
+    return message
+
+def system_json(content):
+    """
+    创建一个system角色的JSON块(字典块)
+    """
+    message = {'role': "system",
+             'content': content}
+    return message
 
 def quick_chat(question):
     return chat([{'role': 'assistant', 'content': "初次见面,很高兴认识你."},
                   {'role': 'system', 'content': '要特别注意用户的提问是否包含口语,例如:"在哪边"的意思是住在哪里'}], question)
+
 LLM_load_test=quick_chat('你好,我是MCyj,你在哪边?')
-print(  LLM_load_test )
+# print(  LLM_load_test )
+#model:ERNIE-3.5-8K 上下文功能优异
+#gemini-2.0-flash 速度比较快,推理能力不行
+#ideogram_describe 图像转文本

@@ -32,7 +32,7 @@ def close_wechat_Main_Window():
 
 def refresh_wechat_window(Main=False,Notify=True,):
     """
-    刷新微信窗口到可见窗台.
+    刷新微信窗口到可见状态.
     """
     wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表
     for t, w in enumerate(wechat_windows):

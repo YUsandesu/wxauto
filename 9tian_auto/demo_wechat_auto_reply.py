@@ -118,7 +118,6 @@ def get_rely():
         return None
     return back_word
 
-
 def start():
     send_message_to_user(ADMIN_USER, f'启动成功 测试: {LLM_load_test} ')
     while True:
@@ -128,15 +127,15 @@ def start():
         if is_new_information():
             print('**识别到新消息**,进入等待时间')
             close_window(Main=True, Notify=False, close=True)
-            time.sleep(2)  # 给120秒时间由本人回复
+            time.sleep(2)  # 给2秒时间由本人回复
             autoit.mouse_move(0, 0, 2)
             if not is_new_information():
                 print("已经人工回复,重新监听")
                 time.sleep(3)
                 continue
-            move_to_wechat_sys()
-            autoit.mouse_click()
-            while refresh_wechat_window(Main=True, Notify=False) is False:
+            move_to_wechat_sys() #移动到托盘图标
+            autoit.mouse_click() #点击托盘
+            while refresh_wechat_window(Main=True, Notify=False) is False:#刷新wechat直到成功显示
                 move_to_wechat_sys()
                 autoit.mouse_click()
                 continue
@@ -151,6 +150,14 @@ def start():
                 autoit.send('{ENTER}')
                 autoit.send('{ENTER}')
                 close_window(Main=True, Notify=False, close=True)
+
+
+# print('learning:学习模式,学习所有收到的对话')
+# print('自动回复模式:直接按下回车继续')
+# user_input = input("请输入内容后按 Enter 键继续: ")
+# if user_input == 'learning':
+#     LEARNING=True
+#     REPLY=False
 
 # while True:
 #     try:
