@@ -6,6 +6,7 @@ from py5 import background
 from datetime import datetime, timedelta
 
 from spyder.plugins.completion.providers.snippets.widgets.snippetsconfig import LANGUAGE
+from sympy.physics.units import temperature
 
 from get_wechat_handle import *
 from llm import *
@@ -125,7 +126,6 @@ def get_now_time(second=True,microsecond=True):
         back_time=f'{back_time}:{now_time.microsecond}'
     return back_time
 
-
 def _read_element(controls):
     """
     此程序用于将元素列表转换为易读信息
@@ -219,14 +219,6 @@ def _read_element(controls):
     the_new_message=chat_list #此时因为没有新的时间出现,不会上传chat_list,所以这是最新的消息
     return back,user_name,the_new_message
 
-def read_new_message_list():
-    """
-    获取最新时间的消息[内容,用户名]
-    """
-    con = get_chat_element()
-    _,_,back= _read_element(con)#FIXME 这个函数返回有修改
-    return back
-
 def read_message_list(max_length=None):
     """
     Args:
@@ -305,6 +297,25 @@ def message_to_llm_list(message_list):
         back.append({'role': 'system', 'content': f'过了{now_gap}之后...现在的时间是:{today_CHN}'})
     else:back.append({'role': 'system', 'content': f'现在的时间是:{today_CHN}'})
     return back
+def extract_question_from_llm_list(message_list):
+    """
+    从llmlist[{},{},{}]中取出最新的一部分作为问题,包含系统content,和用户content
+    返回值 (最新的内容,删去最新内容的message_list)
+    """
+    question = []
+    llm_copy_reverse = message_list[::-1]  # 创建副本,取倒列表
+    for i in llm_copy_reverse:
+        if i['role'] == 'system':
+            question.append(i)
+            message_list.remove(i)
+        if i['role'] == 'user':
+            question.append(i)
+            message_list.remove(i)
+            print(i)
+            break
+    question = question[::-1]
+    print(question)
+    return question,message_list
 
 def _message_to_text(message_list, time_inf=True, user_inf=True, me_inf=True, event_inf=True):
     back_str=''
@@ -507,7 +518,16 @@ NORELY_WORD_LIST=setup_info['no']
 NORELY_WORDS=','.join(str(x) for x in NORELY_WORD_LIST)#回复中不能出现的消息
 LANGUAGE_TYPE=setup_info['la_type']
 print(NORELY_WORDS)
-#测试能否从当前打开的聊天界面获取信息并生成回复
+
+def chat_similarity(str1, str2):
+    """
+    获取相似度,只适用于中文
+    """
+    set1 = set([char for char in str1] )
+    set2 = set([char for char in str2] )
+    return len(set1.intersection(set2)) / len(set1.union(set2))
+
+
 def new_reply_function(the_background=BACKGROUND, no_reply=NORELY_WORDS, la_type=LANGUAGE_TYPE, emoji=True, reply_len=25):
     """
     :param the_background:关于任务的信息背景描述
@@ -523,14 +543,15 @@ def new_reply_function(the_background=BACKGROUND, no_reply=NORELY_WORDS, la_type
             'content': "终极目标:不要让对方发现你不是人类,因为自动回复会让对方感到不被不尊重"}
     no_answer = {'role': "system",
               'content': "特殊要求:\n"
-                         "如果不用回答,而是继续沉默,请回复:'gotostop no answer'加上合理的理由\n"
-                         "如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'加上从哪里看出来的\n"
+                         "为了保持上下文内容连贯,可以选择不回答\n"
+                         "如果不用回答,而是保持沉默,请回复:'gotostop no answer'加上你认为要沉默的理由\n"
+                         "如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'再附上你这么认为的理由\n"
                          "如果对方给出对于某事的肯定答复,例如你说要发送收款码,但你并不是真的'人类'无法做到,请回复'gotostop wait',如果对方有可能发红包,或者有发了红包的可能,请回复'gotostop red box'\n"}
     up_down = {'role': "system", 'content': "以下为当前聊天上下文,用来了解对话中的语境,不要学习对话风格,但需要注意之后的回答不要和语境内容相重复!:"}
     if emoji is False:
         emoji_str="特别要求:<从现在开始改变对话语气:禁止任何颜文字表情符号,仅使用文字回答,"
     else:emoji_str="特别要求:<从现在开始改变对话语气:使用一些可爱的日系颜文字表情符号,但最多出现一个,"
-    back_limit=system_json(emoji_str+f"回答内容总字符应该限制在:{reply_len}个左右,字符数偏差值不能超过正负5>,")
+    back_limit=system_json(emoji_str+f"除了'gotostop'的情况外,回答内容长度强制要求在:{reply_len-15}-{reply_len+15}个汉字之间")
     mes_list = read_message_list()
     print(f'原始输入内容:\n{mes_list}')
     llm = message_to_llm_list(mes_list)
@@ -538,27 +559,56 @@ def new_reply_function(the_background=BACKGROUND, no_reply=NORELY_WORDS, la_type
         if i['role']=='user':
             i['content']=reduce_error(i['content'])
     print(f'降噪后结果:\n{llm}')
-    question = []
-    llm_copy = llm[::-1]  # 创建副本
-    for i in llm_copy:
-        if i['role'] == 'system':
-            question.append(i)
-            llm.remove(i)
-        if i['role'] == 'user':
-            question.append(i)
-            llm.remove(i)
-            break
-    question = question[::-1]
+    question,last_llm = extract_question_from_llm_list(llm)
     la_type=system_json(la_type)
     no_reply=system_json(f"在回复时候不要使用的词语:{no_reply}")
-    re_back=chat_post([front]+[the_background]+[system_json("学习资料,以下与内容上下文无关,只用来学习语言风格")] +load_learn_data()+[system_json("风格学习资料内容结束")]
-                  + [back] + [no_answer] + [up_down] +llm[:-1]+[system_json("语境内容结束")]+[la_type]+[back_limit]+[no_reply]+question, 0.3,model='gpt-4o')
+    post = ([front] + [the_background] + [system_json("学习资料,以下与内容上下文无关,只用来学习对话风格")]
+            + load_learn_data() + [system_json("对话风格学习资料内容结束")]+ [back] + [no_answer] + [up_down]
+            + last_llm + [system_json("语境内容结束")] + [la_type] + [no_reply]   + question + [back_limit] +[system_json("现在,请给出符合要求的回复")])
+    re_back=chat_post(post, 0.3,model='gpt-4o')
     if 'API' in re_back and 'content' in re_back:
-        re_back = chat_post([front] + [the_background] + [
-            system_json("学习资料,以下与内容上下文无关,只用来学习语言风格")] + load_learn_data() + [
-                                system_json("风格学习资料内容结束")]
-                            + [back] + [no_answer] + [up_down] + llm[:-1] + [system_json("语境内容结束")] + [
-                                la_type] + [back_limit] + [no_reply] + question, 0.3, model='gemini-2.0-flash')
+        warnings.warn(f'生成失败,改用gemini模型{re_back}')
+        re_back = chat_post(post, temperature=0.3, model='gemini-2.0-flash')
+
 #model='gemini-2.0-flash'
+    val_similar, similar_part = llm_with_reply_similar(last_llm, re_back)
+    print((reply_len-15<len(re_back)<reply_len+15),"回复字符数目:",len(re_back),'上下文相似度:',val_similar)
+
+    if val_similar>0.6:
+        warnings.warn(f'{re_back}:相似度过大')
+        post = ([front] + [the_background] + [system_json("学习资料,以下与内容上下文无关,只用来学习对话风格")]
+                + load_learn_data() + [system_json("对话风格学习资料内容结束")] + [back] + [no_answer] + [up_down]
+                + similar_part + [system_json("语境内容结束")] + [la_type] + [no_reply] + question + [back_limit] + [
+                    system_json("现在,请给出符合要求的回复")])
+        print(post)
+        re_back = chat_post(post, temperature=0.3, model='gpt-4o')
     return  re_back
-# new_reply_function()
+
+def llm_with_reply_similar(llm, reply,val=0.1):
+    """
+    判断回复内容是否和上文过于相似,从llm字典中找出相似的内容并删除,降低噪声
+    val:权值下降的梯度,梯度越小,越严格
+    返回相似度
+    """
+    llm_copy = llm[::-1]  # 倒序副本
+    me_chat = [i['content'] for i in llm_copy if i['role'] == 'assistant']
+    index = [t for t, i in enumerate(llm_copy) if i['role'] == 'assistant']
+
+    similar_val = 1
+    del_index = []  # 用于记录需要删除的索引
+    # 计算相似度并记录需要删除的部分
+    for x, i in enumerate(me_chat):
+        the_sim=chat_similarity(i, reply)
+        if the_sim > 0.6:
+            warnings.warn(f'发现相似信息:{i}和{reply}')
+            del_index.append(index[x])  # 记录原始列表中的索引
+            similar_val = similar_val - (-val * x*the_sim + 1)
+
+    # 删除重复部分
+    for i in del_index[::-1]:
+        # 注意：索引应该按降序删除，以避免删除后索引错乱
+        del llm_copy[index[i]]
+
+    return (1-similar_val),llm_copy[::-1]
+
+# print(new_reply_function(reply_len=9))

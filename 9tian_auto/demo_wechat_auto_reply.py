@@ -55,7 +55,7 @@ def send_message_to_user(user,message):
             time.sleep(1)
             b_inf=refresh_wechat_window(Main=True, Notify=False)
             print(b_inf)
-        x, y = get_search_element()
+        x, y = get_search_control_location()
         autoit.mouse_move(x, y, 2)
         autoit.mouse_click()
         time.sleep(1)
@@ -99,6 +99,7 @@ def get_rely():
     if text_len >25:
         text_len=round(text_len+(text_len-25)/3)
     print(f'会话长度:{text_len},{emoj}')
+    # FIXME 这里乱的要死 很多重复获取了控件
     controls = get_chat_element()
     myname=get_my_name()
     text,user = element_2_text(controls,myname)
@@ -138,7 +139,7 @@ def get_rely():
     return back_word
 
 def start():
-    send_message_to_user(ADMIN_USER, f'启动成功 测试: {LLM_load_test} ')
+    send_message_to_user(ADMIN_USER, f'启动成功')
     while True:
         close_window(Main=True, Notify=False, close=True)
         time.sleep(1.1)

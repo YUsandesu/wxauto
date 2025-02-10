@@ -222,7 +222,7 @@ def quick_chat(question):
     return chat([{'role': 'assistant', 'content': "初次见面,很高兴认识你."},
                   {'role': 'system', 'content': '要特别注意用户的提问是否包含口语,例如:"在哪边"的意思是住在哪里'}], question)
 
-LLM_load_test=quick_chat('你好,我是MCyj,你在哪边?')
+# LLM_load_test=quick_chat('你好,我是MCyj,你在哪边?')
 # print(  LLM_load_test )
 #model:ERNIE-3.5-8K 上下文功能优异
 #gemini-2.0-flash 速度比较快,推理能力不行
