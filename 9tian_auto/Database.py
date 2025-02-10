@@ -4,6 +4,9 @@ import hashlib
 import warnings
 from py5 import background
 from datetime import datetime, timedelta
+
+from spyder.plugins.completion.providers.snippets.widgets.snippetsconfig import LANGUAGE
+
 from get_wechat_handle import *
 from llm import *
 def is_int(num):  # 判断是否为整数
@@ -221,7 +224,7 @@ def read_new_message_list():
     获取最新时间的消息[内容,用户名]
     """
     con = get_chat_element()
-    _,_,back= _read_element(con)
+    _,_,back= _read_element(con)#FIXME 这个函数返回有修改
     return back
 
 def read_message_list(max_length=None):
@@ -286,6 +289,9 @@ def message_to_llm_list(message_list):
                 else:
                     content = f'对方向我发送了一个{chat_message[1]}'
                 back.append({'role':'system','content':content})
+                continue
+            elif 'money' in chat_message[0]:
+                back.append({'role': 'system', 'content': '事件:对方发来了一个红包'})
                 continue
             else:
                 role = 'user'
@@ -497,26 +503,56 @@ def hash_2_user(value_hash):
     return None  # 没找到匹配的哈希值
 
 BACKGROUND=setup_info['bg']
+NORELY_WORD_LIST=setup_info['no']
+NORELY_WORDS=','.join(str(x) for x in NORELY_WORD_LIST)#回复中不能出现的消息
+LANGUAGE_TYPE=setup_info['la_type']
+print(NORELY_WORDS)
 #测试能否从当前打开的聊天界面获取信息并生成回复
-def new_reply_function(the_background=BACKGROUND):
+def new_reply_function(the_background=BACKGROUND, no_reply=NORELY_WORDS, la_type=LANGUAGE_TYPE, emoji=True, reply_len=25):
+    """
+    :param the_background:关于任务的信息背景描述
+    :param no_reply:不回复的内容,一个[列表型]
+    :param la_type: 关于语言风格的描述
+    :param emoji:是否使用颜文字
+    :return:
+    """
     front = {'role': "system",
-             'content': "你是一个学习用户对话风格的'人类',对话场景处于即时聊天软件.可以使用日系颜文字卖萌,但不要开玩笑."}#请不要使用标点符号而是使用空格代替。
+             'content': "你是一个学习用户对话风格的'人类',对话场景处于即时聊天软件.偶尔可以使用日系颜文字卖萌,但不要开玩笑."}#请不要使用标点符号而是使用空格代替。
     the_background=system_json(the_background)
     back = {'role': "system",
-            'content': "如果不用回答,而是继续沉默,请回复:'gotostop no answer'加上合理的理由,不要让对方发现你不是人类,因为自动回复会让对方感到不被不尊重"}
-    back2 = {'role': "system",
-             'content': "如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'加上从哪里看出来的,"
-                        "如果对方给出对于某事的肯定答复,例如你说要发送收款码,但你并不是真的'人类'无法做到,请回复'gotostop wait'"}
-    back3 = {'role': "system", 'content': "以下为当前聊天上下文,请直接给出合适的回答或者按照上文的要求回复引号中的内容"}
+            'content': "终极目标:不要让对方发现你不是人类,因为自动回复会让对方感到不被不尊重"}
+    no_answer = {'role': "system",
+              'content': "特殊要求:\n"
+                         "如果不用回答,而是继续沉默,请回复:'gotostop no answer'加上合理的理由\n"
+                         "如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'加上从哪里看出来的\n"
+                         "如果对方给出对于某事的肯定答复,例如你说要发送收款码,但你并不是真的'人类'无法做到,请回复'gotostop wait',如果对方有可能发红包,或者有发了红包的可能,请回复'gotostop red box'\n"}
+    up_down = {'role': "system", 'content': "以下为当前聊天上下文,只用来了解对话中的语境,而不学习:"}
+    if emoji is False:
+        emoji_str="特别要求:<从现在开始改变对话语气:禁止任何颜文字表情符号,仅使用文字回答,"
+    else:emoji_str="特别要求:<从现在开始改变对话语气:使用一些可爱的日系颜文字表情符号,但最多出现一个,"
+    back_limit=system_json(emoji_str+f"回答内容总字符应该限制在:{reply_len}个左右,字符数偏差值不能超过正负5>,")
     mes_list = read_message_list()
-    print(mes_list)
+    print(f'原始输入内容:\n{mes_list}')
     llm = message_to_llm_list(mes_list)
     for i in llm:#降噪过程
         if i['role']=='user':
             i['content']=reduce_error(i['content'])
-    print(llm)
-    re_back=chat_post([front]+[the_background]+[system_json("学习资料,以下与内容上下文无关,只用来学习语言风格")] +load_learn_data()
-                  + [back] + [back2] + [back3] +llm, 0.3,model='gemini-2.0-flash')
-
+    print(f'降噪后结果:\n{llm}')
+    question = []
+    llm_copy = llm[::-1]  # 创建副本
+    for i in llm_copy:
+        if i['role'] == 'system':
+            question.append(i)
+            llm.remove(i)
+        if i['role'] == 'user':
+            question.append(i)
+            llm.remove(i)
+            break
+    question = question[::-1]
+    la_type=system_json(la_type)
+    no_reply=system_json(f"在回复时候不要使用的词语:{no_reply}")
+    re_back=chat_post([front]+[the_background]+[system_json("学习资料,以下与内容上下文无关,只用来学习语言风格")] +load_learn_data()+[system_json("风格学习资料内容结束")]
+                  + [back] + [no_answer] + [up_down] +llm[:-1]+[system_json("语境内容结束")]+[la_type]+[back_limit]+[no_reply]+question, 0.3,model='gpt-4o')
+#model='gemini-2.0-flash'
     return  re_back
 # new_reply_function()

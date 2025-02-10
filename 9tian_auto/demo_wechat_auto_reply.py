@@ -1,7 +1,10 @@
+import math
+import random
 import time
 from time import sleep
 
 from fontTools.misc.cython import returns
+from py5 import random_seed
 from twisted.words.protocols.irc import split
 from Database import *
 from get_wechat_handle import *
@@ -48,7 +51,10 @@ def send_message_to_user(user,message):
         调用搜索,找到聊天对象,如果错误返回False,成功返回True
         :return:
         """
-        refresh_wechat_window(Main=True, Notify=False)
+        while not refresh_wechat_window(Main=True, Notify=False):
+            time.sleep(1)
+            b_inf=refresh_wechat_window(Main=True, Notify=False)
+            print(b_inf)
         x, y = get_search_element()
         autoit.mouse_move(x, y, 2)
         autoit.mouse_click()
@@ -84,6 +90,15 @@ def send_message_to_user(user,message):
     close_window(Main=True, Notify=False, close=True)
 
 def get_rely():
+    random_seed=random.randint(-5,12)
+    if random_seed>=0:
+        emoj=False
+    else:emoj=True
+    text_len = math.sqrt(random.randint(1,5))
+    text_len = round(text_len)+10
+    if text_len >25:
+        text_len=round(text_len+(text_len-25)/3)
+    print(f'会话长度:{text_len},{emoj}')
     controls = get_chat_element()
     myname=get_my_name()
     text,user = element_2_text(controls,myname)
@@ -108,13 +123,13 @@ def get_rely():
             send_message_to_user(ADMIN_USER, f"Hash: [{user_hash}]-->用户: {user} 发送了一张照片")
             return None
         # back_word = chat(input_message_list, question)
-        back_word= new_reply_function()
+        back_word= new_reply_function(reply_len=text_len,emoji=emoj)
     elif len(message_list)==1:
         # back_word = quick_chat(message_list[0])
-        back_word = new_reply_function()
+        back_word = new_reply_function(reply_len=text_len,emoji=emoj)
     else:
         # back_word = quick_chat('~ o(*￣▽￣*)ブ')
-        back_word = new_reply_function()
+        back_word = new_reply_function(reply_len=text_len,emoji=emoj)
     print(f'OPENAI返回值:{back_word}')
     if 'gotostop' in back_word:
         user_hash = save_name_hash(user)
@@ -143,6 +158,7 @@ def start():
                 move_to_wechat_sys()
                 autoit.mouse_click()
                 continue
+
             answer = get_rely()
             if answer is not None:
                 autoit.send(answer)

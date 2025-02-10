@@ -184,7 +184,7 @@ def reduce_error(text, type=None, del_words_list=[],replace=replace_word_list):
         no_words = ['<--[查看更多消息]\n','收到红包，请在手机上查看']
     elif type== 'output':
         no_words = ['[我说]', '<--', '-->', '"', '\n','以下为新消息','收到红包，请在手机上查看']
-    else: warnings.warn("没有选择降噪模式")
+    # else: warnings.warn("没有选择降噪模式")
     no_words.extend(del_words_list)
     for word in no_words:
         if word in text:

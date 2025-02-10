@@ -232,7 +232,7 @@ def get_search_element():
     返回search元素的屏幕坐标
     """
     Wechat_main=uia.WindowControl(ClassName='WeChatMainWndForPC', searchDepth=1) #获取对象
-    m_rect=Wechat_main.BoundingRectangle
+    # m_rect=Wechat_main.BoundingRectangle
     MainControl1 = [i for i in Wechat_main.GetChildren() if not i.ClassName][0]
     MainControl2 = MainControl1.GetFirstChildControl()
     NavigationBox, SessionBox, ChatBox = MainControl2.GetChildren()
