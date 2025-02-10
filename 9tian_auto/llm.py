@@ -2,7 +2,7 @@
 import os
 # import random
 import requests
-
+import warnings
 desktop_path = os.path.join(os.path.expanduser('~'), 'Desktop')#os.path.expanduser('~') 获取当前用户的主目录路径。os.path.join() 将主目录路径与 'Desktop' 拼接，得到桌面路径。
 setup_file_name = 'MY-AI.txt'# 指定文件名
 setup_file_path = os.path.join(desktop_path, setup_file_name)# 拼接文件的完整路径
@@ -178,13 +178,13 @@ def chat(message_list,question,system_front=system_front,system_down=system_down
     except Exception as e:
         return f"gotostop---API 调用异常: {str(e)}"
 
-def reduce_error(text, type, del_words_list=[],replace=replace_word_list):
-
+def reduce_error(text, type=None, del_words_list=[],replace=replace_word_list):
+    no_words=[]
     if type== 'message_text':
         no_words = ['<--[查看更多消息]\n','收到红包，请在手机上查看']
     elif type== 'output':
         no_words = ['[我说]', '<--', '-->', '"', '\n','以下为新消息','收到红包，请在手机上查看']
-    else: raise ValueError("不符合规范")
+    else: warnings.warn("没有选择降噪模式")
     no_words.extend(del_words_list)
     for word in no_words:
         if word in text:
@@ -199,6 +199,14 @@ def user_json(content):
         创建一个user角色的JSON块(字典块)
         """
     message = {'role': "user",
+               'content': content}
+    return message
+
+def assistant_json(content):
+    """
+            创建一个assistant角色的JSON块(字典块)
+            """
+    message = {'role': "assistant",
                'content': content}
     return message
 

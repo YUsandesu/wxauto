@@ -2,11 +2,10 @@ import os
 import json
 import hashlib
 import warnings
-
-
-from demo_wechat_auto_reply import *
+from py5 import background
 from datetime import datetime, timedelta
-
+from get_wechat_handle import *
+from llm import *
 def is_int(num):  # 判断是否为整数
     try:
         int(num)
@@ -77,12 +76,14 @@ def read_CHN_date(text):
     特例: 2022年12月12日 xx:xx
     """
     today = datetime.today()
+    if '月' not in text or '日' not in text:
+        warnings.warn(f"未知输入:{text}")
     if '年' in text:
         year,text=text.split('年',maxsplit=1)
     else:year = today.year
     date_format = "%Y-%m-%d %H:%M"  # 包括日期和时间
     mouth = text.split('月',maxsplit=1)[0].strip()
-    day = text.split('月',maxsplit=1)[1].split('日',maxsplit=1)[0].strip()
+    day = text.split('月',maxsplit=1)[1]  .split('日',maxsplit=1)[0].strip()
     the_time = text.split(":", maxsplit=1)
     time_h, time_m = the_time[0][-2:], the_time[1][:2]
     parsed_date = datetime.strptime(f'{year}-{mouth}-{day} {time_h}:{time_m}', date_format)
@@ -112,6 +113,15 @@ def get_time_gap_CHN(A,B):
         warnings.warn('时间相同,返回None')
         return None
     raise ValueError(f'时间识别失败{A}-{B}')
+def get_now_time(second=True,microsecond=True):
+    now_time=datetime.today()
+    back_time=f'{now_time.hour}:{now_time.minute}'
+    if second:
+        back_time=f'{back_time}:{now_time.second}'
+    if microsecond:
+        back_time=f'{back_time}:{now_time.microsecond}'
+    return back_time
+
 
 def _read_element(controls):
     """
@@ -181,7 +191,10 @@ def _read_element(controls):
             elif i.Name==user_name:
                 name=user_name
             else:
+                name='unknown'
                 warnings.warn(f'未知名称:{i.Name},控件类型:按钮')
+                data=load_json_file_dict("error.json")
+                save_json_file_dict("error.json",data|{get_now_time():i.Name})
 
             if chat_detail[0]=='_':#如果表头是占位符
                 chat_detail[0]=name #填入用户名
@@ -279,13 +292,15 @@ def message_to_llm_list(message_list):
             back.append({'role':role,'content':chat_message[1]})
     today = datetime.today()
     today_CHN=f'{today.month}月{today.day}日 {today.hour}:{today.minute}'
-    now_gap = get_time_gap_CHN(today_CHN,last_time)
-    if now_gap is None:
-        back.append({'role': 'system', 'content': f'现在的时间是:{today_CHN}'})
-    back.append({'role': 'system', 'content': f'过了{now_gap}之后...现在的时间是:{today_CHN}'})
+    if last_time!='_':
+        now_gap = get_time_gap_CHN(today_CHN, last_time)
+        if now_gap is None:
+            back.append({'role': 'system', 'content': f'现在的时间是:{today_CHN}'})
+        back.append({'role': 'system', 'content': f'过了{now_gap}之后...现在的时间是:{today_CHN}'})
+    else:back.append({'role': 'system', 'content': f'现在的时间是:{today_CHN}'})
     return back
 
-def _message_to_easy_read(message_list, time_inf=True, user_inf=True, me_inf=True, event_inf=True):
+def _message_to_text(message_list, time_inf=True, user_inf=True, me_inf=True, event_inf=True):
     back_str=''
     for t,chat_list in enumerate(message_list):
         if t==0:#第一个项 是时间
@@ -326,7 +341,7 @@ def generate_hash(input_string, str_length=4):
     """
     hash_object = hashlib.sha256()
     hash_object.update(input_string.encode('utf-8'))
-    return hash_object.hexdigest()[:str_length]  # 取前三个字符
+    return hash_object.hexdigest()[:str_length]  # 取前4个字符
 
 def save_name_hash(name):
     directory = "."  # 目标目录
@@ -376,7 +391,7 @@ def load_json_file_dict(file_name):
         with open(json_file_path, "w", encoding="utf-8") as json_file:
             json.dump(data, json_file, indent=4, ensure_ascii=False)
     return data
-def save_json_file_dict(file_name, data):
+def save_json_file_dict(file_name, data,open_tpye='w'):
     directory = "."  # 目标目录
     os.makedirs(directory, exist_ok=True)  # 确保目录存在
     json_file_path = os.path.join(directory, file_name)
@@ -390,28 +405,38 @@ def save_json_file_dict(file_name, data):
         warnings.warn(f"保存文件时发生错误: {e}")
         # 如果保存失败，创建一个新的空 JSON 文件
         try:
-            with open(json_file_path, "w", encoding="utf-8") as json_file:
+            with open(json_file_path, open_tpye, encoding="utf-8") as json_file:
                 json.dump({}, json_file, indent=4, ensure_ascii=False)  # 创建一个空字典文件
             warnings.warn(f"由于保存失败，已创建空的 JSON 文件: {json_file_path}")
         except Exception as e:
             warnings.warn(f"创建空文件时发生错误: {e}")
-
-
-def save_learning_data(text,user_name):
+def save_learning_data(chain_list,user_name):
+    """
+    data格式:{hash:[消息块],[消息块]}
+    """
+    if chain_list==[]:
+        warnings.warn("输入的chainlist为空")
+        return None
     user_hash=generate_hash(user_name)
-    data=load_json_file_dict('learning_Data')
+    data=load_json_file_dict('learning_Data.json')
     if user_hash in data:
-        last_data=data[user_hash]
-
-
-
-def learning_from_text(message_easy_read):
+        new_chain = list(data[user_hash])
+        for i in chain_list:
+            if not i in data[user_hash]:
+                new_chain.append(i)
+        data[user_hash]=new_chain
+    else:
+        data[user_hash]= chain_list
+    save_json_file_dict('learning_Data.json', data)
+    return data[user_hash]
+def learning_from_text(message_text):
     """
     通过文本学习当前聊天窗口的对话内容
     使用o1-mini筛选信息降低噪声
+    返回的是消息对:[对方说,我说][对方说,我说]
     """
     mes_list = read_message_list()
-    text = _message_to_easy_read(mes_list)
+    text = _message_to_text(mes_list)
     front = user_json("下面是一段聊天记录,请为我是可以用在通用场合(对于任何人都适用)的而不是在某些特定情况的回复."
                       "格式以对方说在前,我回复在后,只保留我回答对方话的对话组."
                       "请以 '对方说:xxx\n我说:xxx' 的格式给我一些对话组,不要修改原文的格式,也不要输出多余的内容."
@@ -433,25 +458,26 @@ def learning_from_text(message_easy_read):
             chain=[]
         else:continue
     return back_list
+def learning():
+    user = get_chat_user_name()
+    save_name_hash(user)
+    mes_list = read_message_list(max_length=None)
+    mes_text = _message_to_text(mes_list)
+    text_list=learning_from_text(mes_text)
+    if text_list is None:
+        return None
+    back=save_learning_data(text_list,user)
+    return back
 
-
-#测试能否从当前打开的聊天界面获取信息并生成回复
-def do_test():
-    front = {'role': "system",
-             'content': "你是一个学习用户对话风格的'人类',对话场景处于即时聊天软件,请不要使用标点符号而是使用空格代替。"}
-    back = {'role': "system",
-            'content': "如果不用回答,而是继续沉默,请回复:'gotostop no answer'加上合理的理由,最好相比我的回答更加热情一些,不要让对方发现你不是人类,因为使用自动回复会让对方感到不被不尊重"}
-    back2 = {'role': "system",
-             'content': "如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'"}
-    back3 = {'role': "system", 'content': "请直接给出合适的回答或者'gotostop':"}
-    mes_list = read_message_list()
-    print(mes_list)
-    llm = message_to_llm_list(mes_list)
-    print(llm)
-
-    print(
-        chat_post([front] + llm + [back] + [back2] + [back3], 0.3)
-    )
+def load_learn_data():
+    back=[]
+    data=load_json_file_dict('learning_Data.json')
+    user_list=list(data.values())#每个用户保存的消息对列表[[说,回][说,回]]
+    for chat_chain_list in user_list:
+        for chat_chain in chat_chain_list:
+            back.append(user_json(chat_chain[0].replace('对方说:','')))
+            back.append(assistant_json(chat_chain[1].replace('我说:','')))
+    return back
 
 def hash_2_user(value_hash):
     json_file_path = os.path.join(".", "user_data.json")
@@ -470,4 +496,27 @@ def hash_2_user(value_hash):
             return None  # 解析失败，返回 None
     return None  # 没找到匹配的哈希值
 
+BACKGROUND=setup_info['bg']
+#测试能否从当前打开的聊天界面获取信息并生成回复
+def new_reply_function(the_background=BACKGROUND):
+    front = {'role': "system",
+             'content': "你是一个学习用户对话风格的'人类',对话场景处于即时聊天软件.可以使用日系颜文字卖萌,但不要开玩笑."}#请不要使用标点符号而是使用空格代替。
+    the_background=system_json(the_background)
+    back = {'role': "system",
+            'content': "如果不用回答,而是继续沉默,请回复:'gotostop no answer'加上合理的理由,不要让对方发现你不是人类,因为自动回复会让对方感到不被不尊重"}
+    back2 = {'role': "system",
+             'content': "如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'加上从哪里看出来的,"
+                        "如果对方给出对于某事的肯定答复,例如你说要发送收款码,但你并不是真的'人类'无法做到,请回复'gotostop wait'"}
+    back3 = {'role': "system", 'content': "以下为当前聊天上下文,请直接给出合适的回答或者按照上文的要求回复引号中的内容"}
+    mes_list = read_message_list()
+    print(mes_list)
+    llm = message_to_llm_list(mes_list)
+    for i in llm:#降噪过程
+        if i['role']=='user':
+            i['content']=reduce_error(i['content'])
+    print(llm)
+    re_back=chat_post([front]+[the_background]+[system_json("学习资料,以下与内容上下文无关,只用来学习语言风格")] +load_learn_data()
+                  + [back] + [back2] + [back3] +llm, 0.3,model='gemini-2.0-flash')
 
+    return  re_back
+# new_reply_function()

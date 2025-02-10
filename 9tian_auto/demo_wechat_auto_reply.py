@@ -3,7 +3,7 @@ from time import sleep
 
 from fontTools.misc.cython import returns
 from twisted.words.protocols.irc import split
-
+from Database import *
 from get_wechat_handle import *
 from llm import *
 import autoit
@@ -84,10 +84,11 @@ def send_message_to_user(user,message):
     close_window(Main=True, Notify=False, close=True)
 
 def get_rely():
-    controls , myname = get_chat_element()
+    controls = get_chat_element()
+    myname=get_my_name()
     text,user = element_2_text(controls,myname)
     if user == ADMIN_USER:
-        con,_=get_chat_element(Chatbox=False,Msg=True)
+        con=get_chat_element(Chatbox=False,Msg=True)
         admin_code(con[-1].Name)
     if '[我说]' in text[-10:]:
         print("由于对方还未回复,跳过")
@@ -106,11 +107,14 @@ def get_rely():
             user_hash = save_name_hash(user)
             send_message_to_user(ADMIN_USER, f"Hash: [{user_hash}]-->用户: {user} 发送了一张照片")
             return None
-        back_word = chat(input_message_list, question)
+        # back_word = chat(input_message_list, question)
+        back_word= new_reply_function()
     elif len(message_list)==1:
-        back_word = quick_chat(message_list[0])
+        # back_word = quick_chat(message_list[0])
+        back_word = new_reply_function()
     else:
-        back_word = quick_chat('~ o(*￣▽￣*)ブ')
+        # back_word = quick_chat('~ o(*￣▽￣*)ブ')
+        back_word = new_reply_function()
     print(f'OPENAI返回值:{back_word}')
     if 'gotostop' in back_word:
         user_hash = save_name_hash(user)
@@ -158,7 +162,7 @@ def start():
 # if user_input == 'learning':
 #     LEARNING=True
 #     REPLY=False
-
+start()
 # while True:
 #     try:
 #         start()  # 尝试启动程序
