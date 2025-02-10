@@ -526,7 +526,7 @@ def new_reply_function(the_background=BACKGROUND, no_reply=NORELY_WORDS, la_type
                          "如果不用回答,而是继续沉默,请回复:'gotostop no answer'加上合理的理由\n"
                          "如果你察觉到对方有可能察觉到你是自动回复,或者在测试你是否为自动回复,以及作答有暴露自己不是人类的可能,请回复'gotostop user realize'加上从哪里看出来的\n"
                          "如果对方给出对于某事的肯定答复,例如你说要发送收款码,但你并不是真的'人类'无法做到,请回复'gotostop wait',如果对方有可能发红包,或者有发了红包的可能,请回复'gotostop red box'\n"}
-    up_down = {'role': "system", 'content': "以下为当前聊天上下文,只用来了解对话中的语境,而不学习:"}
+    up_down = {'role': "system", 'content': "以下为当前聊天上下文,用来了解对话中的语境,不要学习对话风格,但需要注意之后的回答不要和语境内容相重复!:"}
     if emoji is False:
         emoji_str="特别要求:<从现在开始改变对话语气:禁止任何颜文字表情符号,仅使用文字回答,"
     else:emoji_str="特别要求:<从现在开始改变对话语气:使用一些可爱的日系颜文字表情符号,但最多出现一个,"
@@ -553,6 +553,12 @@ def new_reply_function(the_background=BACKGROUND, no_reply=NORELY_WORDS, la_type
     no_reply=system_json(f"在回复时候不要使用的词语:{no_reply}")
     re_back=chat_post([front]+[the_background]+[system_json("学习资料,以下与内容上下文无关,只用来学习语言风格")] +load_learn_data()+[system_json("风格学习资料内容结束")]
                   + [back] + [no_answer] + [up_down] +llm[:-1]+[system_json("语境内容结束")]+[la_type]+[back_limit]+[no_reply]+question, 0.3,model='gpt-4o')
+    if 'API' in re_back and 'content' in re_back:
+        re_back = chat_post([front] + [the_background] + [
+            system_json("学习资料,以下与内容上下文无关,只用来学习语言风格")] + load_learn_data() + [
+                                system_json("风格学习资料内容结束")]
+                            + [back] + [no_answer] + [up_down] + llm[:-1] + [system_json("语境内容结束")] + [
+                                la_type] + [back_limit] + [no_reply] + question, 0.3, model='gemini-2.0-flash')
 #model='gemini-2.0-flash'
     return  re_back
 # new_reply_function()

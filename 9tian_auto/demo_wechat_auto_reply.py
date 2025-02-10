@@ -178,15 +178,15 @@ def start():
 # if user_input == 'learning':
 #     LEARNING=True
 #     REPLY=False
-start()
-# while True:
-#     try:
-#         start()  # 尝试启动程序
-#     except Exception as e:
-#         print(f"发生严重错误，错误信息：{e}")
-#         print("尝试重新启动...")
-#         time.sleep(2)  # 等待 2 秒后再次尝试
-#         try:
-#             send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
-#         except Exception as inner_error:
-#             print(f"发送错误报告失败，错误信息: {inner_error}")
+
+while True:
+    try:
+        start()  # 尝试启动程序
+    except Exception as e:
+        print(f"发生严重错误，错误信息：{e}")
+        print("尝试重新启动...")
+        time.sleep(2)  # 等待 2 秒后再次尝试
+        try:
+            send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
+        except Exception as inner_error:
+            print(f"发送错误报告失败，错误信息: {inner_error}")
