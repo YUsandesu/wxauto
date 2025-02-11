@@ -1,17 +1,16 @@
 import math
 import random
 import time
+import warnings
 from time import sleep
-
-from fontTools.misc.cython import returns
-from py5 import random_seed
-from twisted.words.protocols.irc import split
+import traceback
 from Database import *
 from get_wechat_handle import *
 from llm import *
 import autoit
 import sys
 from user_hash import *
+import keyboard
 #+---+
 #|流程|
 #+---+
@@ -33,6 +32,7 @@ from user_hash import *
                                 #TODO 向指定人发送信息
 USER_DONT_REPLY=setup_info['dontreply']
 ADMIN_USER=setup_info['ADMIN']
+run=True
 def admin_code(input_val):
     """
     输入*UserID_send_XXXXX 可以向user发送XXXXX
@@ -91,6 +91,8 @@ def send_message_to_user(user,message):
 
 def get_rely():
     random_seed=random.randint(-5,12)
+    message_json = message_chain_to_json(get_message_chain())
+    newest_reply = message_json[-1]['content']  # 最新的一条消息
     if random_seed>=0:
         emoj=False
     else:emoj=True
@@ -106,41 +108,43 @@ def get_rely():
     if user == ADMIN_USER:
         con=get_chat_element(Chatbox=False,Msg=True)
         admin_code(con[-1].Name)
+
     if '[我说]' in text[-10:]:
         print("由于对方还未回复,跳过")
         return None
-    message_list = text_2_message_list(text,user)#聊天消息列表
+
     if any(i in user for i in USER_DONT_REPLY):#如果昵称在不回复的列表中
         print(f"{user}在不回复的列表中")
         user_hash=save_name_hash(user)
-        send_message_to_user(ADMIN_USER, f"Hash: [{user_hash}]-->用户:[{user}] 发送了消息: {message_list[-1]['content']}")
+        send_message_to_user(ADMIN_USER, f"Hash: [{user_hash}]-->用户:[{user}] 发送了消息: {newest_reply}")
         return None
-    if len(message_list)>=1:
-        input_message_list = message_list[:-1]
-        question = message_list[-1]['content']#最新的一条消息
-        if '[图片]' in question:
-            print(f'{question},暂时还没有照片功能')
-            user_hash = save_name_hash(user)
-            send_message_to_user(ADMIN_USER, f"Hash: [{user_hash}]-->用户: {user} 发送了一张照片")
-            return None
-        # back_word = chat(input_message_list, question)
-        back_word= new_reply_function(reply_len=text_len,emoji=emoj)
-    elif len(message_list)==1:
-        # back_word = quick_chat(message_list[0])
-        back_word = new_reply_function(reply_len=text_len,emoji=emoj)
-    else:
-        # back_word = quick_chat('~ o(*￣▽￣*)ブ')
-        back_word = new_reply_function(reply_len=text_len,emoji=emoj)
+
+    if '[图片]' in newest_reply:
+        print(f'{newest_reply},暂时还没有照片功能')
+        user_hash = save_name_hash(user)
+        send_message_to_user(ADMIN_USER, f"Hash: [{user_hash}]-->用户: {user} 发送了一张照片")
+        return None
+    back_word= chat_base_on_memory(reason=False)
     print(f'OPENAI返回值:{back_word}')
     if 'gotostop' in back_word:
         user_hash = save_name_hash(user)
-        send_message_to_user(ADMIN_USER, f"Hash:[{user_hash}]-->用户:[{user}] 发送了消息: {message_list[-1]['content']} \n但系统拒绝回答,OPENAI: {back_word} ")
+        send_message_to_user(ADMIN_USER, f"Hash:[{user_hash}]-->用户:[{user}] 发送了消息: {newest_reply} \n-->系统拒绝回答,OPENAI: {back_word} ")
         return None
     return back_word
 
+def toggle_pause():
+    global run
+    run = not run
+    print(f"收到按键,当前状态run:{run}")
+keyboard.add_hotkey("ctrl+space", toggle_pause) # 监听键按下
+print("开始监听按键,按下ctrl+space键暂停运行")
 def start():
-    send_message_to_user(ADMIN_USER, f'启动成功')
+    # send_message_to_user(ADMIN_USER, f'启动成功') #TODO正式加载应该开启
+    print("start循环")
     while True:
+        if not run:
+            time.sleep(1)
+            continue
         close_window(Main=True, Notify=False, close=True)
         time.sleep(1.1)
         autoit.mouse_move(0, 0, 2)
@@ -159,7 +163,6 @@ def start():
                 move_to_wechat_sys()
                 autoit.mouse_click()
                 continue
-
             answer = get_rely()
             if answer is not None:
                 autoit.send(answer)
@@ -171,23 +174,32 @@ def start():
                 autoit.send('{ENTER}')
                 autoit.send('{ENTER}')
                 close_window(Main=True, Notify=False, close=True)
-
-
-# print('learning:学习模式,学习所有收到的对话')
-# print('自动回复模式:直接按下回车继续')
-# user_input = input("请输入内容后按 Enter 键继续: ")
-# if user_input == 'learning':
-#     LEARNING=True
-#     REPLY=False
-
-while True:
-    try:
-        start()  # 尝试启动程序
-    except Exception as e:
-        print(f"发生严重错误，错误信息：{e}")
-        print("尝试重新启动...")
-        time.sleep(2)  # 等待 2 秒后再次尝试
-        try:
-            send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
-        except Exception as inner_error:
-            print(f"发送错误报告失败，错误信息: {inner_error}")
+start()
+# while True:
+#     try:
+#         start()  # 尝试启动程序
+#     except Exception as e:
+#         print(f"发生严重错误，错误信息：{e}")
+#         print("尝试重新启动...")
+#         time.sleep(1)  # 等待 1 秒后再次尝试
+#         try:
+#             # send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
+#             tb = traceback.extract_tb(sys.exc_info()[2])  # 提取调用过程
+#             call_stack = []
+#             for frame in tb:
+#                 call_stack.append({
+#                     "function": frame.name,  # 只保留函数名
+#                     "line_number": frame.lineno,  # 出错的行号
+#                     "code": frame.line  # 代码内容
+#                 })
+#
+#             error_info = {
+#                 "error_message": str(e),
+#                 "call_stack": call_stack  # 仅保留调用栈，不含文件路径
+#             }
+#             warnings.warn(f"保存错误内容:{error_info}")
+#             data=load_json_file_dict('run_error.json')
+#             data[get_now_time()]=error_info
+#             save_json_file_dict('run_error.json',data)
+#         except Exception as inner_error:
+#             print(f"发送/保存 错误报告失败，错误信息: {inner_error}")

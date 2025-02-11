@@ -1,0 +1,652 @@
+{
+    "4:1:6:649670": {
+        "error_message": "Handle 7733416 is not a vaild window handle",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 186,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 145,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 158,
+                "code": "back = wechat_shot_screen(Main=False,Notify=True,close=True)"
+            },
+            {
+                "function": "wechat_shot_screen",
+                "line_number": 63,
+                "code": "wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表"
+            },
+            {
+                "function": "windows",
+                "line_number": 139,
+                "code": "return [self.backend.generic_wrapper_class(win) for win in windows]"
+            },
+            {
+                "function": "__new__",
+                "line_number": 180,
+                "code": "return super(HwndWrapper, cls)._create_wrapper(cls, element, HwndWrapper)"
+            },
+            {
+                "function": "_create_wrapper",
+                "line_number": 129,
+                "code": "obj.__init__(element_info)"
+            },
+            {
+                "function": "__init__",
+                "line_number": 1496,
+                "code": "HwndWrapper.__init__(self, hwnd)"
+            },
+            {
+                "function": "__init__",
+                "line_number": 201,
+                "code": "raise InvalidWindowHandle(self.handle)"
+            }
+        ]
+    },
+    "12:38:34:643852": {
+        "error_message": "[WinError 1400] 无效的窗口句柄。",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 202,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 151,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 158,
+                "code": "back = wechat_shot_screen(Main=False,Notify=True,close=True)"
+            },
+            {
+                "function": "wechat_shot_screen",
+                "line_number": 100,
+                "code": "while refresh_wechat_window(Main=False,Notify=True) is False:"
+            },
+            {
+                "function": "refresh_wechat_window",
+                "line_number": 55,
+                "code": "w.set_focus()  # 如果窗口可见"
+            },
+            {
+                "function": "set_focus",
+                "line_number": 1312,
+                "code": "if self.is_minimized():"
+            },
+            {
+                "function": "is_minimized",
+                "line_number": 1241,
+                "code": "return self.get_show_state() == win32defines.SW_SHOWMINIMIZED"
+            },
+            {
+                "function": "get_show_state",
+                "line_number": 1232,
+                "code": "raise ctypes.WinError()"
+            }
+        ]
+    },
+    "12:40:19:871233": {
+        "error_message": "[WinError 1400] 无效的窗口句柄。",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 202,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 151,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 158,
+                "code": "back = wechat_shot_screen(Main=False,Notify=True,close=True)"
+            },
+            {
+                "function": "wechat_shot_screen",
+                "line_number": 100,
+                "code": "while refresh_wechat_window(Main=False,Notify=True) is False:"
+            },
+            {
+                "function": "refresh_wechat_window",
+                "line_number": 55,
+                "code": "w.set_focus()  # 如果窗口可见"
+            },
+            {
+                "function": "set_focus",
+                "line_number": 1312,
+                "code": "if self.is_minimized():"
+            },
+            {
+                "function": "is_minimized",
+                "line_number": 1241,
+                "code": "return self.get_show_state() == win32defines.SW_SHOWMINIMIZED"
+            },
+            {
+                "function": "get_show_state",
+                "line_number": 1232,
+                "code": "raise ctypes.WinError()"
+            }
+        ]
+    },
+    "12:48:15:706372": {
+        "error_message": "[WinError 1400] 无效的窗口句柄。",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 203,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 161,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 158,
+                "code": "back = wechat_shot_screen(Main=False,Notify=True,close=True)"
+            },
+            {
+                "function": "wechat_shot_screen",
+                "line_number": 100,
+                "code": "while refresh_wechat_window(Main=False,Notify=True) is False:"
+            },
+            {
+                "function": "refresh_wechat_window",
+                "line_number": 55,
+                "code": "w.set_focus()  # 如果窗口可见"
+            },
+            {
+                "function": "set_focus",
+                "line_number": 1312,
+                "code": "if self.is_minimized():"
+            },
+            {
+                "function": "is_minimized",
+                "line_number": 1241,
+                "code": "return self.get_show_state() == win32defines.SW_SHOWMINIMIZED"
+            },
+            {
+                "function": "get_show_state",
+                "line_number": 1232,
+                "code": "raise ctypes.WinError()"
+            }
+        ]
+    },
+    "12:56:50:54327": {
+        "error_message": "[WinError 1400] 无效的窗口句柄。",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 202,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 160,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 159,
+                "code": "back = wechat_shot_screen(Main=False,Notify=True,close=True)"
+            },
+            {
+                "function": "wechat_shot_screen",
+                "line_number": 100,
+                "code": "while refresh_wechat_window(Main=False,Notify=True) is False:"
+            },
+            {
+                "function": "refresh_wechat_window",
+                "line_number": 55,
+                "code": "w.set_focus()  # 如果窗口可见"
+            },
+            {
+                "function": "set_focus",
+                "line_number": 1312,
+                "code": "if self.is_minimized():"
+            },
+            {
+                "function": "is_minimized",
+                "line_number": 1241,
+                "code": "return self.get_show_state() == win32defines.SW_SHOWMINIMIZED"
+            },
+            {
+                "function": "get_show_state",
+                "line_number": 1232,
+                "code": "raise ctypes.WinError()"
+            }
+        ]
+    },
+    "14:42:58:436613": {
+        "error_message": "[WinError 1400] 无效的窗口句柄。",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 200,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 160,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 164,
+                "code": "_,notify_shot=wechat_shot_screen(Main=False,Notify=True,close=True)"
+            },
+            {
+                "function": "wechat_shot_screen",
+                "line_number": 104,
+                "code": "if refresh_wechat_window(Main=False,Notify=True) is False:"
+            },
+            {
+                "function": "refresh_wechat_window",
+                "line_number": 58,
+                "code": "w.set_focus()  # 如果窗口可见"
+            },
+            {
+                "function": "set_focus",
+                "line_number": 1312,
+                "code": "if self.is_minimized():"
+            },
+            {
+                "function": "is_minimized",
+                "line_number": 1241,
+                "code": "return self.get_show_state() == win32defines.SW_SHOWMINIMIZED"
+            },
+            {
+                "function": "get_show_state",
+                "line_number": 1232,
+                "code": "raise ctypes.WinError()"
+            }
+        ]
+    },
+    "5:17:56:67687": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:17:59:134531": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:18:2:57318": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:18:5:114976": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:18:8:152281": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:18:11:192925": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:18:14:133106": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:18:17:181039": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:18:19:908469": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:18:22:891541": {
+        "error_message": "OpenCV(4.11.0) D:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.cpp:199: error: (-215:Assertion failed) !_src.empty() in function 'cv::cvtColor'\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 179,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 150,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 166,
+                "code": "back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 34,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:26:32:22315": {
+        "error_message": "Handle 1312218 is not a vaild window handle",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 180,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 151,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 163,
+                "code": "_,notify_shot=wechat_shot_screen(Main=False,Notify=True,close=True)"
+            },
+            {
+                "function": "wechat_shot_screen",
+                "line_number": 67,
+                "code": "wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表"
+            },
+            {
+                "function": "windows",
+                "line_number": 139,
+                "code": "return [self.backend.generic_wrapper_class(win) for win in windows]"
+            },
+            {
+                "function": "__new__",
+                "line_number": 180,
+                "code": "return super(HwndWrapper, cls)._create_wrapper(cls, element, HwndWrapper)"
+            },
+            {
+                "function": "_create_wrapper",
+                "line_number": 129,
+                "code": "obj.__init__(element_info)"
+            },
+            {
+                "function": "__init__",
+                "line_number": 1496,
+                "code": "HwndWrapper.__init__(self, hwnd)"
+            },
+            {
+                "function": "__init__",
+                "line_number": 201,
+                "code": "raise InvalidWindowHandle(self.handle)"
+            }
+        ]
+    },
+    "5:33:16:812088": {
+        "error_message": "OpenCV(4.11.0) d:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.simd_helpers.hpp:92: error: (-15:Bad number of channels) in function '__cdecl cv::impl::`anonymous-namespace'::CvtHelper<struct cv::impl::`anonymous namespace'::Set<3,4,-1>,struct cv::impl::A0xb34b6808::Set<3,-1,-1>,struct cv::impl::A0xb34b6808::Set<0,5,-1>,4>::CvtHelper(const class cv::_InputArray &,const class cv::_OutputArray &,int)'\n> Invalid number of channels in input image:\n>     'VScn::contains(scn)'\n> where\n>     'scn' is 1\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 180,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 151,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 171,
+                "code": "back = recognition_color(find_image=notify_shot, color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 37,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:33:19:594622": {
+        "error_message": "OpenCV(4.11.0) d:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.simd_helpers.hpp:92: error: (-15:Bad number of channels) in function '__cdecl cv::impl::`anonymous-namespace'::CvtHelper<struct cv::impl::`anonymous namespace'::Set<3,4,-1>,struct cv::impl::A0xb34b6808::Set<3,-1,-1>,struct cv::impl::A0xb34b6808::Set<0,5,-1>,4>::CvtHelper(const class cv::_InputArray &,const class cv::_OutputArray &,int)'\n> Invalid number of channels in input image:\n>     'VScn::contains(scn)'\n> where\n>     'scn' is 1\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 180,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 151,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 171,
+                "code": "back = recognition_color(find_image=notify_shot, color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 37,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    },
+    "5:33:22:648674": {
+        "error_message": "OpenCV(4.11.0) d:\\a\\opencv-python\\opencv-python\\opencv\\modules\\imgproc\\src\\color.simd_helpers.hpp:92: error: (-15:Bad number of channels) in function '__cdecl cv::impl::`anonymous-namespace'::CvtHelper<struct cv::impl::`anonymous namespace'::Set<3,4,-1>,struct cv::impl::A0xb34b6808::Set<3,-1,-1>,struct cv::impl::A0xb34b6808::Set<0,5,-1>,4>::CvtHelper(const class cv::_InputArray &,const class cv::_OutputArray &,int)'\n> Invalid number of channels in input image:\n>     'VScn::contains(scn)'\n> where\n>     'scn' is 1\n",
+        "call_stack": [
+            {
+                "function": "<module>",
+                "line_number": 180,
+                "code": "start()  # 尝试启动程序"
+            },
+            {
+                "function": "start",
+                "line_number": 151,
+                "code": "if is_new_information():"
+            },
+            {
+                "function": "is_new_information",
+                "line_number": 171,
+                "code": "back = recognition_color(find_image=notify_shot, color_smooth=0, color=wechat_red_BGR)"
+            },
+            {
+                "function": "recognition_color",
+                "line_number": 37,
+                "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间"
+            }
+        ]
+    }
+}

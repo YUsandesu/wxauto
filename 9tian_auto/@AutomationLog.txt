@@ -1,0 +1,10 @@
+2025-02-09 21:24:35.692 get_wechat_handle.py[177] get_chat_element -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2025-02-10 23:47:51.875 get_wechat_handle.py[181] get_chat_element -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2025-02-11 00:10:57.959 get_wechat_handle.py[181] get_chat_element -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2025-02-11 00:11:24.958 get_wechat_handle.py[181] get_chat_element -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2025-02-11 00:13:52.576 get_wechat_handle.py[181] get_chat_element -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2025-02-11 00:17:21.754 get_wechat_handle.py[181] get_chat_element -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2025-02-11 01:11:43.587 get_wechat_handle.py[181] get_chat_element -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2025-02-11 02:45:41.593 get_wechat_handle.py[181] get_chat_element -> 2025-02-11 02:47:50.321 get_wechat_handle.py[181] get_chat_element -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2025-02-11 02:48:10.435 get_wechat_handle.py[181] get_chat_element -> Find Control Timeout(10s): {ClassName: 'WeChatMainWndForPC', ControlType: WindowControl}
+2025-02-11 03:46:58.996 get_wechat_handle.py[182] get_chat_element -> 

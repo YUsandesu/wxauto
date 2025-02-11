@@ -10,7 +10,7 @@ from wechat_image_recognition import *
 import autoit
 # import llm
 import uiautomation as uia
-
+import warnings
 def sys_shot():
     taskbar_handle = win32gui.FindWindow("Shell_TrayWnd", None)  # 获取任务栏句柄
     systray_handle = win32gui.FindWindowEx(taskbar_handle, 0, "TrayNotifyWnd", None)  # 获取托盘句柄
@@ -30,13 +30,16 @@ def close_wechat_Main_Window():
                 w.set_focus()
                 w.close_alt_f4()
                 if w.is_visible is True:
+                    warnings.warm(f"窗口依然存在,关闭失败,进入强制循环调用,可能卡死:{w}")
                     close_wechat_Main_Window()#循环调用
 
 def refresh_wechat_window(Main=False,Notify=True,):
     """
     刷新微信窗口到可见状态.
+    刷新失败返回False
     """
     #FIXME 这样查找窗口句柄是不行的 因为后面多开需要分线程
+    print("refresh_wechat_window")
     wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表
     for t, w in enumerate(wechat_windows):
         if w.class_name() == 'WeChatMainWndForPC' and Main:  # 微信主窗口的类名：WeChatMainWndForPC，可见时：'style': 370081792
@@ -57,9 +60,13 @@ def refresh_wechat_window(Main=False,Notify=True,):
                 return False
             # print('Wechat未读消息---开始快照')
     return True
+#TODO refresh_wechat_window需要修改 将两种查找分离开
 
 def wechat_shot_screen(Main=True,Notify=True,close=True):
-    back_dict={}
+    """
+    返回[Main,Notify],失败是F,否则返回图片
+    """
+    back=[Main,Notify]
     wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表
     #此处使用的实际是:findwindows.find_elements()
     #TODO 此处接受PROCESS参数,应该修改以适应将来的多进程
@@ -77,43 +84,45 @@ def wechat_shot_screen(Main=True,Notify=True,close=True):
             # print('Wechat聊天主界面---开始快照')
             if w.is_visible() is False:
                 while refresh_wechat_window(Main=True,Notify=False) is False:
+                    #循环刷新直到窗口显示
                     time.sleep(1)
                     continue
-                wechat_shot_screen(Main,Notify,close)
-                break
             image = w.capture_as_image()  # 获取窗口截图作为PIL图像对象
             image.save(f'Main_Window.png')  # 保存图像
-            rect = w.rectangle()
-            back_dict['Main']=rect.left, rect.top
+            back[0] = image
             if close:
                 if w.is_visible():
-                    w.close_alt_f4()  # 关闭窗口
-
+                    try:
+                        w.close_alt_f4()  # 关闭窗口
+                    except Exception as e:
+                        warnings.warn(f"出现异常,跳过本次关闭{w}")
 
         if w.class_name() == 'TrayNotifyWnd' and Notify:  # 微信消息提示窗口类名 TrayNotifyWnd
             if w.is_visible is False:
                 w.restore()
             else:
                 w.set_focus()  # 如果窗口可见
-            # print('Wechat未读消息---开始快照')
+
             if w.is_visible() is False:
-                while refresh_wechat_window(Main=False,Notify=True) is False:
-                    time.sleep(1)
+                # 如果找不到 就一直把鼠标移到托盘 尝试启动
+                if refresh_wechat_window(Main=False,Notify=True) is False:
+                    warnings.warn("没有找到Notify窗口,无法快照")
+                    back[1]=False
                     continue
-                break
-            image = w.capture_as_image()  # 获取窗口截图作为PIL图像对象
-            image.save(f'Notify_window.png')  # 保存图像
-            rect = w.rectangle()
-            back_dict['Notify'] = rect.left, rect.top
+            else:
+                image = w.capture_as_image()  # 获取窗口截图作为PIL图像对象
+                image.save(f'Notify_window.png')  # 保存图像
+                back[1]=image
             if close:
                 if w.is_visible():
                     try:
                         w.close_alt_f4()  # 关闭窗口
                     except Exception as e:
-                        print(f"出现异常,跳过本次关闭{w}")
+                        warnings.warn(f"出现异常,跳过本次关闭{w}")
 
+    print(back)
+    return back
 
-    return back_dict
 
 def close_window(Main=True,Notify=True,close=True):
     wechat_windows = Desktop().windows(title='微信')  # 获取微信窗口列表
@@ -139,8 +148,9 @@ def move_to_wechat_sys():
     """
     autoit.mouse_move(random.randint(0,100), random.randint(0,100), speed=2)
     x, y = sys_shot()
-    if recognition_color(blur=True) is not False:
-        w_x, w_y = recognition_color()
+    location=recognition_color(blur=True)
+    if location is not False:
+        w_x, w_y = location
         # print(x, y)
         # print(w_x, w_y)
         # print(x + w_x, y + w_y)
@@ -153,10 +163,16 @@ def is_new_information():
     """
     通过颜色识别来判断是否存在新消息
     """
+    print("进入is_new_information")
     move_to_wechat_sys()
-    back = wechat_shot_screen(Main=False,Notify=True,close=True)
-    # print(back)
-    back = recognition_color(find_image='Notify_window.png', color_smooth=0, color=wechat_red_BGR)
+    _,notify_shot=wechat_shot_screen(Main=False,Notify=True,close=True)
+    if not notify_shot:
+        return False
+    shot=np.array(notify_shot)
+    shot_bgr = cv2.cvtColor(shot, cv2.COLOR_RGB2BGR)
+    back = recognition_color(find_image=shot_bgr, color_smooth=0, color=wechat_red_BGR)
+    # back = recognition_color(find_image='Notify_window.png',color_smooth=0, color=wechat_red_BGR)
+    print('查找是否含有红色点',back)
     if back is not False:
         return True
     else:
@@ -170,7 +186,13 @@ def get_my_name():
     NavigationBox, SessionBox, ChatBox = MainControl2.GetChildren()
     A_MyIcon = NavigationBox.ButtonControl()
     return A_MyIcon.Name
-
+def get_chat_user_name():
+    """
+    用户吗是在Chatbox中的 需要重新获取,聊天记录用的都是Msglist
+    """
+    refresh_wechat_window(Main=True, Notify=False)
+    con = get_chat_element(Chatbox=True, Msg=False)
+    return con[0].Name
 def get_chat_element(Chatbox=False,Msg=True):
     """
     Chatbox:整个聊天窗口(更上一层)
@@ -283,8 +305,5 @@ def get_send_button_location():
             center=[i.BoundingRectangle.xcenter(), i.BoundingRectangle.ycenter()]
             return center
 
-def get_chat_user_name():
-    refresh_wechat_window(Main=True,Notify=False)
-    con = get_chat_element(Chatbox=True, Msg=False)
-    return con[0].Name
+
 

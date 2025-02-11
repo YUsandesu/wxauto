@@ -30,7 +30,10 @@ def recognition_color(find_image="sys.png",color=wechat_green_BGR,color_smooth=1
     low_HSV = np.clip(wechat_sys_color_HSV - smooth, [0, 0, 0], [179, 255, 255])
     #FIXME HSV空间转换应该重新定义色相纯度明度的SMOOTH关系
     # print(f'取值范围：{up_HSV}---{low_HSV}')
-    image = cv2.imread(find_image)# 读取图像
+
+    if isinstance(find_image,str):
+        image = cv2.imread(find_image)  # 读取图像
+    else:image = find_image #TODO 从内存读取
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)# 转换到 HSV 颜色空间
     mask = cv2.inRange(hsv, low_HSV, up_HSV)# 颜色过滤，创建掩码
     if blur:
@@ -58,6 +61,7 @@ def recognition_color(find_image="sys.png",color=wechat_green_BGR,color_smooth=1
         cv2.imshow("Masked & Blurred", mask)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+
     if len(contours_dict)==0:
         return False
     return contours_dict[max(list(contours_dict.keys()))]
