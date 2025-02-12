@@ -2,13 +2,27 @@ import os
 import json
 import hashlib
 import warnings
-
 from datetime import datetime, timedelta
-
-from PIL.ImImagePlugin import split
-
 from get_wechat_handle import *
 from llm import *
+
+# claude-3-5-sonnet-20241022  8.5分
+# claude-3-5-sonnet-20240620 8分
+# deepseek-chat 7.5分
+# ERNIE-4.0-8K 7分--->速度比较慢,但准确率很高
+# deepseek-r1  7分--->非常准确 但是太慢了,思维链太长
+# qwen-72b             6.5分
+# qwen2.5-72b-instruct 6分 --->逻辑能力不足,搞不清前后时间关系
+# #gemini-2.0-flash  6分
+# #gpt-4o            5分-->上下文能力不足
+# ERNIE-Speed-128K 4分---> 逻辑较差,长文本时所问非所答
+# llama-3.1-405b  2.5 机械重复说过的话
+# glm-4-0520   2.5分(7.5分) --->输出内容非常好,但是不稳定,总是说一些无关的话.
+# glm-4-airx   2.5分
+# claude-3-haiku-20240307 2分 思维能力差,所问非所答
+
+bg=setup_info['bg']
+
 def is_int(num):  # 判断是否为整数
     try:
         int(num)
@@ -156,240 +170,143 @@ def get_now_time(second=True,microsecond=True):
     if microsecond:
         back_time=f'{back_time}:{now_time.microsecond}'
     return back_time
-def _read_element(control_list):
+
+def elements_to_message_chain(control_list):
     """
-    <<这是一个内部函数,如果获取消息记录,建议使用get_message_chain>>
-    将元素列表转换为可用信息
-    [ [时间,[ user_name,xx],[me,xx],[gpt,xxx],[money,money],[event,[图片] ] ],[时间,...]]
-    按照时间分出了一些列表,每个列表的第一项是时间,之后的项目是聊天记录
-    :param control_list: >一组control对象
-    :return: (一组纯文本的消息记录,聊天的对象名)
+    将微信Msg窗口的[元素列表]转换为[消息块] 方便使用
+    输出内容:[时间,用户名,内容],[时间,用户名,内容],[..,..],..
     """
-    event_message='[图片]','[位置]','语音通话','视频通话','[语音]','[动画表情]','[链接]','[视频号]'#完整信息:[语音]?秒 语音通话 对方已取消 视频通话 对方已取消
+    event_message='[图片]','[位置]','语音通话','视频通话','[语音]','[动画表情]','[链接]','[视频号]'#完整信息: [语音]xx秒 语音通话 对方已取消 视频通话 对方已取消
     important_event_message = '收到红包，请在手机上查看', '微信转账'
-    useless_message= {'以下为新消息','以下是新消息'}#使用set速度更快
+    useless_message= {'以下为新消息','以下是新消息','查看更多消息'}#使用set速度更快
 
     me = get_my_name()
     user_name = get_chat_user_name()
-    print(user_name)
-    name = '_'
+
+    user = ''
     the_time = ''
-    chat_list=['_'] #其中填写了占位符,占位日期 [日期,chat_detail,chat_detail]
-    chat_detail=['_','_'] #其中填写了占位符,占位用户名 [对象,内容]
+    message = ''
     back=[]
+
     for i in control_list:
         if i.LocalizedControlType == '文本':
-            continue
+            continue #不读文本控件内容
         if i.Name in useless_message:
             continue #无用信息跳过
         if i.Name in important_event_message:
-            chat_list.append(["money","money"])
+            user='money_' + user
+            message='money'
             continue
         if i.Name in event_message:
-            chat_list.append(['event',i.Name])
+            user='event_' + user
+            message=i.Name
             continue
 
-        if read_datetime(i.Name) is not None:#接受到日期信息
-            the_time=read_datetime(i.Name)
-            if chat_list[0]=='_':#如果是占位符就填入日期
-                chat_list[0]=the_time
-                continue
-            else:#如果不是,说明当前时间已经填入,这是一个新的时间
-                if len(chat_list)>1:#确保chat_list里面有消息
-                    back.append(chat_list)
-                    chat_list=[the_time]#重新新建一个列表
-                    continue
-                else:
-                    if chat_detail[0]!="_" and chat_detail[1]!="_":
-                        #防止因为chat_detail因为没有上传导致空
-                        warnings.warn("chat_detail还没有上传")
-                        chat_list.append(chat_detail)
-                        chat_detail=['_','_']
-                        chat_list = [the_time]  # 重新新建一个列表
-                    else:
-                        warnings.warn("只有时间信息,chat_list却为空,可能是删除过消息")
-                    print(chat_detail)
-                    continue
+        is_time = read_datetime(i.Name)
+        if is_time:#接受到日期信息
+            the_time = is_time
+            continue
 
         if i.LocalizedControlType == '列表项目':#wechat还有一种控件叫'文本'但是返回信息不如列表项目全
-            if chat_detail[1]=='_':#如果内容部分是占位符
-                chat_detail[1]=i.Name.strip()
-            else:
-                if chat_detail[0]=='_': #此时还没有识别到新的Name,但是有内容
-                    warnings.warn(f"此时可能是有头像没有识别到,导致错误:chat_detail:{chat_detail}")
-                    chat_detail[1] = chat_detail[1].strip() + "\n" + i.Name.strip()
-                    continue
-                else:
-                    warnings.warn(f"此时已经有内容,而且有名字,不应该出现这种情况,因为出现新名字立刻就上传了:chat_detail:{chat_detail}")
+            message=i.Name
+            continue
+
         if i.LocalizedControlType == '按钮':#头像信息,可以取到名称
-            if i.Name==me:
-                name='me'
-            elif i.Name==user_name:
-                name=user_name
+            if '_' in user:
+                user = user + i.Name
             else:
-                name='unknown'
-                warnings.warn(f'未知名称:{i.Name},控件类型:按钮')
-                data=load_json_file_dict("error.json")
-                save_json_file_dict("error.json",data|{get_now_time():i.Name})
+                user = i.Name
 
-            if chat_detail[0]=='_':#如果表头是占位符
-                chat_detail[0]=name #填入用户名
-
-                if chat_detail[1]!='_':
-                    chat_list.append(chat_detail)
-                    chat_detail = ["_", '_']  # 重新初始化列表,清空detail
-                    continue
-
-            if chat_detail[0]!='_' and chat_detail[1]=="_":
-                if chat_list[-1][0]=='event':
-                    chat_list[-1][0]='event_'+name
-                else:
-                    warnings.warn(f'已经发现出现新名字,但是聊天记录是空的-->'
-                                  f'清空detail防止程序错误,但是丢失了信息{chat_detail}')
-                chat_detail = ['_','_']#重新更新
-                continue
-
-    the_new_message=chat_list #此时因为没有新的时间出现,不会上传chat_list,所以这是最新的消息
-    return back,user_name,the_new_message
-def get_message_chain(max_length=None):
+        if (user != '' and user!='money_' and user!='event_') and the_time !='' and message!='':
+            back.append([the_time,user,message])
+            user=''
+            message=''
+    if len(back)==0:
+        back = None
+    # print(f"elements_to_message_chain输出内容\n"
+    #       f"===============================\n"
+    #       f"{back}\n"
+    #       f"===============================\n")
+    return back
+def get_message_chain(max_length=None,message_chains=None,my_name=None):
     """
-    程序流程:
-    get_chat_element()获取控件列表-->_read_element()获取聊天内容列表-->处理列表信息为单个信息块
-    max_length: 获取到的对话最大长度(以对方的消息为计数)
-    None-->无限长度
-    返回:[时间,用户名,内容],[时间,用户名,内容],...
+    一直倒着查找,直到到达最大长度并撞到"我"的发言为止(撞到后不添加我的发言到back)
+    my_name 会被替换成'me'
+    length:None为无限长度
     """
-    if max_length is None:
-        max_length = 9999
-    now_length=0
-    con = get_chat_element()
+
+    if not message_chains:
+        con = get_chat_element()
+        message_chains = elements_to_message_chain(con)
+    if not my_name:
+        my_name = get_my_name()
+
+    now_length = 0
     back = []
-    chat_list=[]
-    message_list,user_name,the_new_message = _read_element(con)
-    the_time = the_new_message[0]
-    chat_list=[the_time]
-    for chat_detail in the_new_message[1:][::-1]:
-       if chat_detail[0]==user_name:
-           now_length=now_length+1
-       chat_list.append([chat_detail[0],chat_detail[1]])
-       if now_length >= max_length:
-           break
-    back.append([chat_list[0]]+chat_list[1:][::-1])
 
-    for time_chat in message_list[::-1]:#倒序
-        the_time = time_chat[0]
-        chat_list = [the_time]
-        if  now_length >= max_length:
-            break
-        for chat_detail in time_chat[::-1][:-1]:#倒序但切掉time信息
-            user = chat_detail[0]
-            message = chat_detail[1]
-            chat_list.insert(1,[user,message])
-            if user == user_name:
-                now_length=now_length+1
-            if now_length>=max_length:
-                break
-        back.append([chat_list[0]]+chat_list[1:])
-    return back[::-1]
-def message_chain_to_text(message_list,my_reply='我说:',he_say='对方说:', time_inf=True, user_inf=True, me_inf=True, event_inf=True):
-    back_str=''
-    for t,chat_list in enumerate(message_list):
-        if t==0:#第一个项 是时间
-            last_time = chat_list[0]
-            back_str = back_str + f'我们是从{last_time}开始聊天的\n'
+    reverse_mes_chain = message_chains[::-1]
+
+    for t,(the_time,user,message) in enumerate(reverse_mes_chain):
+        if my_name in user:
+            reverse_mes_chain[t][1]=user.replace(user,'me')
+            if max_length is not None and now_length>=max_length:
+
+                return back[::-1]
+            back.append(reverse_mes_chain[t])
+            continue
         else:
-            gap=get_time_gap_CHN(chat_list[0],last_time)
-            if time_inf:
-                back_str= back_str+ f'过了{gap}之后\n'
-            last_time = chat_list[0]
-        for chat_message in chat_list[1:]:
-            if chat_message[0] == 'me':
-                if me_inf:
-                    back_str = back_str + f'{my_reply}{chat_message[1]}\n'
-            elif 'event' in chat_message[0]:
-                user_from = chat_message[0].split('_',maxsplit=1)[1]
-                if user_from == 'me':
-                    if event_inf:back_str = back_str + f'对方看到了我发送的{chat_message[1]}\n'
-                else:
-                    if event_inf:back_str = back_str + f'对方向我发送了一个{chat_message[1]}\n'
-                continue
-            else:
-                if user_inf:
-                    back_str = back_str + f'{he_say}{chat_message[1]}\n'
+            now_length=now_length+1
+            back.append(reverse_mes_chain[t])
+
+    return back[::-1]
+def message_chain_to_text(message_chain, my_reply='我说:', he_say='对方说:', time_inf=True, user_inf=True, me_inf=True, event_inf=True):
+    """
+    message_chain示例:[[日期,用户,时间],[日期,用户,时间],...]
+    """
+
+    back_text= ''
+    last_time=''
     today = datetime.today()
     today_CHN = f'{today.month}月{today.day}日 {today.hour}:{today.minute}'
-    now_gap = get_time_gap_CHN(today_CHN, last_time)
-    if now_gap is None:
-        back_str = back_str + f'距离刚才的聊天已经过了{now_gap},现在是{today.hour}点{today.minute}分'
-    else:
-        back_str = back_str + f'现在是{today.hour}点{today.minute}分'
-    return back_str
-def message_chain_to_json(message_chain):
-    """
-    将[MessageChain]转化为OPENAI接受的json格式
-    """
-    back=[]
-    update_dict={}
-    for t,chat_list in enumerate(message_chain):
-        if t==0:#第一个项 是时间
-            last_time = chat_list[0]
+
+    for t,user,chat in message_chain: #最先循环到的是旧的消息
+
+        gap = get_time_gap_CHN(today_CHN, t)
+        if time_inf:
+            if not last_time:#如果是第一次循环
+                last_time = t
+                if gap:  # 防止gap返回None
+                    back_text = back_text + f'已知最早的聊天记录是{gap}之前:\n' #是从{t}开始的
+            if last_time != t:
+                last_time = t
+                if gap: #防止gap返回None
+                    back_text = back_text + f'\n{gap}之前:\n'
+
+        if user == 'me':
+             if me_inf:
+                 back_text = back_text + f'{my_reply}{chat}\n'
+        elif 'event' in user:
+             user_from = user.split('_',maxsplit=1)[1]
+             if user_from == 'me':
+                 if event_inf:
+                    back_text = back_text + f'对方看到了我发送的{chat}\n'
+             else:
+                 if event_inf:
+                    back_text = back_text + f'对方向我发送了一个{chat}\n'
         else:
-            gap=get_time_gap_CHN(chat_list[0],last_time)
-            back.append({'role':'system','content':f'{gap}之后'})
-            last_time = chat_list[0]
-        for chat_message in chat_list[1:]:
+            if user_inf:
+                 back_text = back_text + f'{he_say}{chat}\n'
 
-            if chat_message[0] == 'me':
-                role = 'assistant'
-                back.append({'role': role, 'content': chat_message[1]})
-            elif 'event' in chat_message[0]:
-                user_from = chat_message[0].split('_',maxsplit=1)[1]
-                if user_from == 'me':
-                    content = f'对方看到了我发送的{chat_message[1]}'
-                else:
-                    content = f'对方向我发送了一个{chat_message[1]}'
-                back.append({'role':'system','content':content})
-                continue
-            elif 'money' in chat_message[0]:
-                back.append({'role': 'system', 'content': '事件:对方发来了一个红包'})
-                continue
-            else:
-                role = 'user'
-                back.append({'role': role, 'content': '对方发来了内容:'+chat_message[1]})
-
-    today = datetime.today()
-    today_CHN=f'{today.month}月{today.day}日 {today.hour}:{today.minute}'
-    if last_time!='_':
+    if time_inf:
         now_gap = get_time_gap_CHN(today_CHN, last_time)
-        if now_gap is None:
-            back.append({'role': 'system', 'content': f'现在的时间是:{today_CHN}'})
-        back.append({'role': 'system', 'content': f'过了{now_gap}之后...现在的时间是:{today_CHN}'})
-    else:back.append({'role': 'system', 'content': f'现在的时间是:{today_CHN}'})
-    return back
-def extract_question_from_json(openai_json, distance=1):
-    """
-    从OPENAI_JSON中取出最新的一部分作为问题,包含系统content,和用户content
-    distance:一直截取到第几次用户提问
-    返回值 (最新的内容,删去最新内容的message_list)
-    """
-    stop=False
-    question = []
-    llm_copy_reverse = openai_json[::-1]  # 创建副本,取倒列表
-    for i in llm_copy_reverse:
-        if i['role'] == 'system':
-            question.append(i)
-            openai_json.remove(i)
-        if i['role'] == 'user':
-            question.append(i)
-            openai_json.remove(i)
-            distance=distance-1
-            if distance<=0:
-                stop=True
-        if i['role'] == 'assistant' and stop:
-            break
-    question = question[::-1]
-    print(question)
-    return question,openai_json
+        if now_gap:
+            back_text = back_text + f'\n现在是{today.hour}点{today.minute}分,距离上次聊天已经过了{now_gap}'
+        else:
+            back_text = back_text + f'\n现在是{today.hour}点{today.minute}分'
+
+    return back_text
+# print(message_chain_to_text(get_message_chain(),he_say='',time_inf=False,me_inf=False))
+
 def load_learning_data_to_text(file='learning_Data.json'):
     learn_words = ''
     learn_data = list(load_json_file_dict(file).values())
@@ -397,7 +314,6 @@ def load_learning_data_to_text(file='learning_Data.json'):
         for e in i:
             learn_words = learn_words + e[0].strip() + "---" + e[1].strip() + '\n'
     return learn_words
-bg=setup_info['bg']
 
 def chat_base_on_memory(my_nick='我',user_nick='',back_ground=bg,len_limit=0,reason=True):
     """
@@ -409,29 +325,16 @@ def chat_base_on_memory(my_nick='我',user_nick='',back_ground=bg,len_limit=0,re
     """
     if not user_nick:
         user_nick=create_nick_name(test=False)
+
     mes_chain = get_message_chain()
+
     if len_limit==0:
         len_limit=get_reply_len_limit(mes_chain)
         print("字数限制:",len_limit)
-        if len_limit<5:
-            len_limit=5#防止过小
-    chatmes = message_chain_to_text(mes_chain, he_say=f'{user_nick}对我说:', my_reply=f"{my_nick}对他说:")
+
+    chat_mes = message_chain_to_text(mes_chain, he_say=f'{user_nick}对我说:', my_reply=f"{my_nick}对他说:")
     chat = CHAT()
     chat.model('claude-3-5-sonnet-20241022') #grok-beta #llama-3.2-90b-vision-instruct
-    #claude-3-5-sonnet-20241022  8.5分
-    # claude-3-5-sonnet-20240620 8分
-    #deepseek-chat 7.5分
-    #ERNIE-4.0-8K 7分--->速度比较慢,但准确率很高
-    #deepseek-r1  7分--->非常准确 但是太慢了,思维链太长
-    #qwen-72b             6.5分
-    #qwen2.5-72b-instruct 6分 --->逻辑能力不足,搞不清前后时间关系
-    # #gemini-2.0-flash  6分
-    # #gpt-4o            5分-->上下文能力不足
-    # ERNIE-Speed-128K 4分---> 逻辑较差,长文本时所问非所答
-    #llama-3.1-405b  2.5 机械重复说过的话
-    #glm-4-0520   2.5分(7.5分) --->输出内容非常好,但是不稳定,总是说一些无关的话.
-    #glm-4-airx   2.5分
-    # claude-3-haiku-20240307 2分 思维能力差,所问非所答
     #学习文本:
     chat.system("你要学习互联网即时聊天的语言模式,接下来用户会给你一些聊天实例,不用回答")
     chat.user(load_learning_data_to_text())  # 加载学习文本
@@ -440,7 +343,7 @@ def chat_base_on_memory(my_nick='我',user_nick='',back_ground=bg,len_limit=0,re
     chat.user(back_ground)
     #对话情景信息:
     chat.system("你的任务是模仿用户的语言模式去回复他人,接下来用户会给你一些对话情景,不用回答")
-    chat.user(chatmes)
+    chat.user(chat_mes)
     chat.user(f'以上就是对话情景,把他当作是你的记忆,请注意内容中关于我的自称,还要注意你的回复是否与在时间上自洽') #可选:请注意我对于对方的程序,这是我通常对他的称呼
     #拒绝回答情况说明:
     chat.user  (  "特殊要求:\n"
@@ -459,7 +362,8 @@ def chat_base_on_memory(my_nick='我',user_nick='',back_ground=bg,len_limit=0,re
         the_reason=chat.post()
         back=[back,the_reason]
     return back
-def create_nick_name(test=False,model='claude-3-5-sonnet-20241022'):#deepseek-r1
+
+def create_nick_name(test=False,model='gemini-2.0-flash'):#deepseek-r1
     user_name=get_chat_user_name()
     chat=CHAT()
     chat.model(model)
@@ -481,23 +385,31 @@ def create_nick_name(test=False,model='claude-3-5-sonnet-20241022'):#deepseek-r1
         chat.user("请给出为什么这么起名的理由")
         chat.system("现在直接回答理由")
         back=[back,deep_seek_r1_text(chat.post())]
-
-    return back
+    return back.strip()
 def get_reply_len_limit(message_chain):
-    js = message_chain_to_json(message_chain)
-    new_que,_ = extract_question_from_json(js)
-    back=0
-    weight=[1,0.5,0.2,0.2,0.1,0.05]
-    t=0
-    for i in new_que:
-        if i['role']=='user':
-            if '引用' in i['content']:
-                i['content']=i['content'].split("引用")[0]
-            back = back+(len(i['content'].replace(' ',''))-len("对方发来了内容:"))*weight[t]  #FIXME 这个减法很蠢
-            t = t + 1 if t < len(weight) - 1 else t
-            #len取出的是字符数,可以正确取出中文字符数
-    return round(back)
+    """
+    返回回复的长度=(最大回复长度/2+上次回复长度/2)
+    """
 
+    all_message_user = message_chain_to_text(message_chain, he_say='', time_inf=False, me_inf=False,event_inf=False)
+    all_message_user = all_message_user.replace(' ','')
+    max_reply_len = max([len(i) for i in all_message_user.split("\n") if i and '引用' not in i])
+
+    newest_message = get_message_chain(1,message_chain,'me')
+    newest_mes_text = message_chain_to_text(newest_message, he_say='', time_inf=False, me_inf=False,event_inf=False)
+    newest_mes_text = newest_mes_text.replace(' ','')
+    new_message = [i for i in newest_mes_text.split('\n') if i and '引用' not in i]
+    print(new_message)
+    new_reply_len = 0
+    weight = [1, 0.5, 0.3, 0.2, 0.1, 0.05]
+    for t,i in enumerate(new_message[::-1]):#从最新的开始
+        new_reply_len = new_reply_len + len( i ) * weight[t if t<=len(weight)-1 else len(weight)-1] #len取出的是字符数,可以正确取出中文字符数
+    back = round(max_reply_len*0.5+new_reply_len*0.5)
+    print('new_reply_len',new_reply_len)
+    print('max_reply_len',max_reply_len)
+    if back < 8:
+        return 8
+    return back
 def deep_seek_r1_text(text):
     if '</think>' in text:
         return text.split('</think>')[-1].strip()
@@ -632,11 +544,11 @@ def hash_2_user(value_hash):
             return None  # 解析失败，返回 None
     return None  # 没找到匹配的哈希值
 
-BACKGROUND=setup_info['bg']
-NORELY_WORD_LIST=setup_info['no']
-NORELY_WORDS=','.join(str(x) for x in NORELY_WORD_LIST)#回复中不能出现的消息
-LANGUAGE_TYPE=setup_info['la_type']
-print(NORELY_WORDS)
+# BACKGROUND=setup_info['bg']
+# NORELY_WORD_LIST=setup_info['no']
+# NORELY_WORDS=','.join(str(x) for x in NORELY_WORD_LIST)#回复中不能出现的消息
+# LANGUAGE_TYPE=setup_info['la_type']
+# print(NORELY_WORDS)
 
 def chat_similarity(str1, str2):
     """
@@ -645,59 +557,6 @@ def chat_similarity(str1, str2):
     set1 = set([char for char in str1] )
     set2 = set([char for char in str2] )
     return len(set1.intersection(set2)) / len(set1.union(set2))
-
-
-def new_reply_function(the_background=BACKGROUND, no_reply=NORELY_WORDS, la_type=LANGUAGE_TYPE, emoji=True, reply_len=25):
-    """
-    :param the_background:关于任务的信息背景描述
-    :param no_reply:不回复的内容,一个[列表型]
-    :param la_type: 关于语言风格的描述
-    :param emoji:是否使用颜文字
-    :return:
-    """
-    # front = {'role': "system",
-    #          'content': "你是一个学习用户对话风格的'人类',对话场景处于即时聊天软件.偶尔可以使用日系颜文字卖萌,但不要开玩笑."}#请不要使用标点符号而是使用空格代替。
-    # the_background=system_json(the_background)
-    # back = {'role': "system",
-    #         'content': "终极目标:不要让对方发现你不是人类,因为自动回复会让对方感到不被不尊重"}
-
-    up_down = {'role': "system", 'content': "以下为当前聊天上下文,用来了解对话中的语境,不要学习对话风格,但需要注意之后的回答不要和语境内容相重复!:"}
-    if emoji is False:
-        emoji_str="特别要求:<从现在开始改变对话语气:禁止任何颜文字表情符号,仅使用文字回答,"
-    else:emoji_str="特别要求:<从现在开始改变对话语气:使用一些可爱的日系颜文字表情符号,但最多出现一个,"
-    back_limit=system_json(emoji_str+f"除了'gotostop'的情况外,回答内容长度强制要求在:{abs(reply_len-15)}-{abs(reply_len+15)}个汉字之间")
-    mes_list = get_message_chain()
-    print(f'原始输入内容:\n{mes_list}')
-    llm = message_chain_to_json(mes_list)
-    for i in llm:#降噪过程
-        if i['role']=='user':
-            i['content']=reduce_error(i['content'])
-    print(f'降噪后结果:\n{llm}')
-    question,last_llm = extract_question_from_json(llm)
-    la_type=system_json(la_type)
-    no_reply=system_json(f"在回复时候不要使用的词语:{no_reply}")
-    post = ([front] + [the_background] + [system_json("学习资料,以下与内容上下文无关,只用来学习对话风格")]
-            + load_learn_data() + [system_json("对话风格学习资料内容结束")]+ [back] + [no_answer] + [up_down]
-            + last_llm + [system_json("语境内容结束")] + [la_type] + [no_reply]   + question + [back_limit] +[system_json("现在,请给出符合要求的回复")])
-    re_back=chat_post(post, 0.3,model='gpt-4o')
-    if 'API' in re_back and 'content' in re_back:
-        warnings.warn(f'生成失败,改用gemini模型{re_back}')
-        re_back = chat_post(post, temperature=0.3, model='gemini-2.0-flash')
-
-#model='gemini-2.0-flash'
-    val_similar, similar_part = llm_with_reply_similar(last_llm, re_back)
-    print((reply_len-15<len(re_back)<reply_len+15),"回复字符数目:",len(re_back),'上下文相似度:',val_similar)
-
-    if val_similar>0.6:
-        warnings.warn(f'{re_back}:相似度过大')
-        post = ([front] + [the_background] + [system_json("学习资料,以下与内容上下文无关,只用来学习对话风格")]
-                + load_learn_data() + [system_json("对话风格学习资料内容结束")] + [back] + [no_answer] + [up_down]
-                + similar_part + [system_json("语境内容结束")] + [la_type] + [no_reply] + question + [back_limit] + [
-                    system_json("现在,请给出符合要求的回复,要及时通过拒绝回答来终止聊天,防止聊天无限期进行下去")])
-        print(post)
-        re_back = chat_post(post, temperature=0.3, model='gpt-4o')
-    return  re_back
-
 
 def llm_with_reply_similar(llm, reply, val=0.3):
     """
@@ -732,6 +591,124 @@ def llm_with_reply_similar(llm, reply, val=0.3):
     if similar_val>1:
         similar_val=0
     return (1 - similar_val), llm_copy[::-1]
+
+# def new_reply_function(the_background=BACKGROUND, no_reply=NORELY_WORDS, la_type=LANGUAGE_TYPE, emoji=True, reply_len=25):
+#     """
+#     :param the_background:关于任务的信息背景描述
+#     :param no_reply:不回复的内容,一个[列表型]
+#     :param la_type: 关于语言风格的描述
+#     :param emoji:是否使用颜文字
+#     :return:
+#     """
+#     # front = {'role': "system",
+#     #          'content': "你是一个学习用户对话风格的'人类',对话场景处于即时聊天软件.偶尔可以使用日系颜文字卖萌,但不要开玩笑."}#请不要使用标点符号而是使用空格代替。
+#     # the_background=system_json(the_background)
+#     # back = {'role': "system",
+#     #         'content': "终极目标:不要让对方发现你不是人类,因为自动回复会让对方感到不被不尊重"}
+#
+#     up_down = {'role': "system", 'content': "以下为当前聊天上下文,用来了解对话中的语境,不要学习对话风格,但需要注意之后的回答不要和语境内容相重复!:"}
+#     if emoji is False:
+#         emoji_str="特别要求:<从现在开始改变对话语气:禁止任何颜文字表情符号,仅使用文字回答,"
+#     else:emoji_str="特别要求:<从现在开始改变对话语气:使用一些可爱的日系颜文字表情符号,但最多出现一个,"
+#     back_limit=system_json(emoji_str+f"除了'gotostop'的情况外,回答内容长度强制要求在:{abs(reply_len-15)}-{abs(reply_len+15)}个汉字之间")
+#     mes_list = get_message_chain()
+#     print(f'原始输入内容:\n{mes_list}')
+#     llm = message_chain_to_json(mes_list)
+#     for i in llm:#降噪过程
+#         if i['role']=='user':
+#             i['content']=reduce_error(i['content'])
+#     print(f'降噪后结果:\n{llm}')
+#     question,last_llm = extract_question_from_json(llm)
+#     la_type=system_json(la_type)
+#     no_reply=system_json(f"在回复时候不要使用的词语:{no_reply}")
+#     post = ([front] + [the_background] + [system_json("学习资料,以下与内容上下文无关,只用来学习对话风格")]
+#             + load_learn_data() + [system_json("对话风格学习资料内容结束")]+ [back] + [no_answer] + [up_down]
+#             + last_llm + [system_json("语境内容结束")] + [la_type] + [no_reply]   + question + [back_limit] +[system_json("现在,请给出符合要求的回复")])
+#     re_back=chat_post(post, 0.3,model='gpt-4o')
+#     if 'API' in re_back and 'content' in re_back:
+#         warnings.warn(f'生成失败,改用gemini模型{re_back}')
+#         re_back = chat_post(post, temperature=0.3, model='gemini-2.0-flash')
+#
+# #model='gemini-2.0-flash'
+#     val_similar, similar_part = llm_with_reply_similar(last_llm, re_back)
+#     print((reply_len-15<len(re_back)<reply_len+15),"回复字符数目:",len(re_back),'上下文相似度:',val_similar)
+#
+#     if val_similar>0.6:
+#         warnings.warn(f'{re_back}:相似度过大')
+#         post = ([front] + [the_background] + [system_json("学习资料,以下与内容上下文无关,只用来学习对话风格")]
+#                 + load_learn_data() + [system_json("对话风格学习资料内容结束")] + [back] + [no_answer] + [up_down]
+#                 + similar_part + [system_json("语境内容结束")] + [la_type] + [no_reply] + question + [back_limit] + [
+#                     system_json("现在,请给出符合要求的回复,要及时通过拒绝回答来终止聊天,防止聊天无限期进行下去")])
+#         print(post)
+#         re_back = chat_post(post, temperature=0.3, model='gpt-4o')
+#     return  re_back
+# def message_chain_to_json(message_chain):
+#     """
+#     将[MessageChain]转化为OPENAI接受的json格式
+#     """
+#     back=[]
+#     update_dict={}
+#     for t,(the_time,user,message) in enumerate(message_chain):
+#         if t==0:#第一个项 是时间
+#             last_time = chat_list[0]
+#         else:
+#             gap=get_time_gap_CHN(chat_list[0],last_time)
+#             back.append({'role':'system','content':f'{gap}之后'})
+#             last_time = chat_list[0]
+#         for chat_message in chat_list[1:]:
+#
+#             if chat_message[0] == 'me':
+#                 role = 'assistant'
+#                 back.append({'role': role, 'content': chat_message[1]})
+#             elif 'event' in chat_message[0]:
+#                 user_from = chat_message[0].split('_',maxsplit=1)[1]
+#                 if user_from == 'me':
+#                     content = f'对方看到了我发送的{chat_message[1]}'
+#                 else:
+#                     content = f'对方向我发送了一个{chat_message[1]}'
+#                 back.append({'role':'system','content':content})
+#                 continue
+#             elif 'money' in chat_message[0]:
+#                 back.append({'role': 'system', 'content': '事件:对方发来了一个红包'})
+#                 continue
+#             else:
+#                 role = 'user'
+#                 back.append({'role': role, 'content': '对方发来了内容:'+chat_message[1]})
+#
+#     today = datetime.today()
+#     today_CHN=f'{today.month}月{today.day}日 {today.hour}:{today.minute}'
+#     if last_time!='_':
+#         now_gap = get_time_gap_CHN(today_CHN, last_time)
+#         if now_gap is None:
+#             back.append({'role': 'system', 'content': f'现在的时间是:{today_CHN}'})
+#         back.append({'role': 'system', 'content': f'过了{now_gap}之后...现在的时间是:{today_CHN}'})
+#     else:back.append({'role': 'system', 'content': f'现在的时间是:{today_CHN}'})
+#     return back
+# def extract_question_from_json(openai_json, distance=1):
+#     """
+#     从OPENAI_JSON中取出最新的一部分作为问题,包含系统content,和用户content
+#     distance:一直截取到第几次用户提问
+#     返回值 (最新的内容,删去最新内容的message_list)
+#     """
+#     stop=False
+#     question = []
+#     llm_copy_reverse = openai_json[::-1]  # 创建副本,取倒列表
+#     for i in llm_copy_reverse:
+#         if i['role'] == 'system':
+#             question.append(i)
+#             openai_json.remove(i)
+#         if i['role'] == 'user':
+#             question.append(i)
+#             openai_json.remove(i)
+#             distance=distance-1
+#             if distance<=0:
+#                 stop=True
+#         if i['role'] == 'assistant' and stop:
+#             break
+#     question = question[::-1]
+#     print(question)
+#     return question,openai_json
+
 
 
 # print(llm_with_reply_similar(mes_list,"手机号码:18811120311"))

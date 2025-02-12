@@ -186,13 +186,15 @@ def get_my_name():
     NavigationBox, SessionBox, ChatBox = MainControl2.GetChildren()
     A_MyIcon = NavigationBox.ButtonControl()
     return A_MyIcon.Name
+
 def get_chat_user_name():
     """
-    用户吗是在Chatbox中的 需要重新获取,聊天记录用的都是Msglist
+    用户名是在Chatbox中的 需要重新获取,聊天记录用的都是Msglist
     """
     refresh_wechat_window(Main=True, Notify=False)
     con = get_chat_element(Chatbox=True, Msg=False)
     return con[0].Name
+
 def get_chat_element(Chatbox=False,Msg=True):
     """
     Chatbox:整个聊天窗口(更上一层)
