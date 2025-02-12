@@ -174,32 +174,32 @@ def start():
                 autoit.send('{ENTER}')
                 autoit.send('{ENTER}')
                 close_window(Main=True, Notify=False, close=True)
-start()
-# while True:
-#     try:
-#         start()  # 尝试启动程序
-#     except Exception as e:
-#         print(f"发生严重错误，错误信息：{e}")
-#         print("尝试重新启动...")
-#         time.sleep(1)  # 等待 1 秒后再次尝试
-#         try:
-#             # send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
-#             tb = traceback.extract_tb(sys.exc_info()[2])  # 提取调用过程
-#             call_stack = []
-#             for frame in tb:
-#                 call_stack.append({
-#                     "function": frame.name,  # 只保留函数名
-#                     "line_number": frame.lineno,  # 出错的行号
-#                     "code": frame.line  # 代码内容
-#                 })
-#
-#             error_info = {
-#                 "error_message": str(e),
-#                 "call_stack": call_stack  # 仅保留调用栈，不含文件路径
-#             }
-#             warnings.warn(f"保存错误内容:{error_info}")
-#             data=load_json_file_dict('run_error.json')
-#             data[get_now_time()]=error_info
-#             save_json_file_dict('run_error.json',data)
-#         except Exception as inner_error:
-#             print(f"发送/保存 错误报告失败，错误信息: {inner_error}")
+# start()
+while True:
+    try:
+        start()  # 尝试启动程序
+    except Exception as e:
+        print(f"发生严重错误，错误信息：{e}")
+        print("尝试重新启动...")
+        time.sleep(1)  # 等待 1 秒后再次尝试
+        try:
+            # send_message_to_user(ADMIN_USER, f'程序运行发生错误, 错误代码: {e}')
+            tb = traceback.extract_tb(sys.exc_info()[2])  # 提取调用过程
+            call_stack = []
+            for frame in tb:
+                call_stack.append({
+                    "function": frame.name,  # 只保留函数名
+                    "line_number": frame.lineno,  # 出错的行号
+                    "code": frame.line  # 代码内容
+                })
+
+            error_info = {
+                "error_message": str(e),
+                "call_stack": call_stack  # 仅保留调用栈，不含文件路径
+            }
+            warnings.warn(f"保存错误内容:{error_info}")
+            data=load_json_file_dict('run_error.json')
+            data[get_now_time()]=error_info
+            save_json_file_dict('run_error.json',data)
+        except Exception as inner_error:
+            print(f"发送/保存 错误报告失败，错误信息: {inner_error}")

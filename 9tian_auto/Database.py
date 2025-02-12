@@ -487,14 +487,17 @@ def get_reply_len_limit(message_chain):
     js = message_chain_to_json(message_chain)
     new_que,_ = extract_question_from_json(js)
     back=0
-    weight=[1,0.8,0.8,0.5,0.3,0.1]
+    weight=[1,0.5,0.2,0.2,0.1,0.05]
     t=0
     for i in new_que:
         if i['role']=='user':
-            back = back+len(i['content'])-len("对方发来了内容:")*weight[t]  #FIXME 这个减法很蠢
+            if '引用' in i['content']:
+                i['content']=i['content'].split("引用")[0]
+            back = back+(len(i['content'].replace(' ',''))-len("对方发来了内容:"))*weight[t]  #FIXME 这个减法很蠢
             t = t + 1 if t < len(weight) - 1 else t
             #len取出的是字符数,可以正确取出中文字符数
-    return round(back*1.5)+10
+    return round(back)
+
 def deep_seek_r1_text(text):
     if '</think>' in text:
         return text.split('</think>')[-1].strip()
