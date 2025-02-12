@@ -74,6 +74,7 @@ def read_datetime(text):
         '星期四': 3,
         '星期五': 4,
         '星期六': 5,
+        '星期天': 6,
         '星期日': 6
     }
     today = datetime.today()

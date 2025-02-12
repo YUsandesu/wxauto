@@ -170,6 +170,8 @@ def is_new_information():
         return False
     shot=np.array(notify_shot)
     shot_bgr = cv2.cvtColor(shot, cv2.COLOR_RGB2BGR)
+    if isinstance(shot_bgr,bool):
+        return False
     back = recognition_color(find_image=shot_bgr, color_smooth=0, color=wechat_red_BGR)
     # back = recognition_color(find_image='Notify_window.png',color_smooth=0, color=wechat_red_BGR)
     print('查找是否含有红色点',back)

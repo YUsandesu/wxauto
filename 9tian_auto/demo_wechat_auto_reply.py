@@ -91,8 +91,8 @@ def send_message_to_user(user,message):
 
 def get_rely():
     random_seed=random.randint(-5,12)
-    message_json = message_chain_to_json(get_message_chain())
-    newest_reply = message_json[-1]['content']  # 最新的一条消息
+    # message_json = message_chain_to_json(get_message_chain())
+    # newest_reply = message_json[-1]['content']  # 最新的一条消息
     if random_seed>=0:
         emoj=False
     else:emoj=True
@@ -105,6 +105,10 @@ def get_rely():
     controls = get_chat_element()
     myname=get_my_name()
     text,user = element_2_text(controls,myname)
+    newest_chain=get_message_chain(1,None,myname)
+    newest_reply=message_chain_to_text(newest_chain,
+                                       he_say='',
+                                       time_inf=False,user_inf=True,event_inf=False,me_inf=False).replace('\n','||')
     if user == ADMIN_USER:
         con=get_chat_element(Chatbox=False,Msg=True)
         admin_code(con[-1].Name)
